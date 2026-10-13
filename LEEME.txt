@@ -1,0 +1,3 @@
+MI PLATA - archivos para armar el APK desde el teléfono
+Subí TODOS estos archivos sueltos a tu repositorio de GitHub (sin carpetas).
+Después creá en GitHub el archivo  .github/workflows/construir-apk.yml  con el texto que te pasó Claude.

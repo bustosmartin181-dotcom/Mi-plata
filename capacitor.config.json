@@ -1,0 +1,7 @@
+{
+  "appId": "com.miplata.app",
+  "appName": "Mi plata",
+  "webDir": "www",
+  "backgroundColor": "#eef1f5",
+  "server": { "androidScheme": "https" }
+}
