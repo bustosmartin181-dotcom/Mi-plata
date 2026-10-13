@@ -1,7 +1,9 @@
 {
-  "appId": "com.miplata.app",
+  "appId": "com.bustos.miplata",
   "appName": "Mi plata",
   "webDir": "www",
-  "backgroundColor": "#eef1f5",
-  "server": { "androidScheme": "https" }
+  "backgroundColor": "#F5F1EB",
+  "server": {
+    "androidScheme": "https"
+  }
 }

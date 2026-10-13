@@ -2,50 +2,394 @@
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mi plata</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-<meta name="theme-color" content="#0b5cad">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#1B6B4A">
 <style>
-:root{--bg:#eef1f5;--card:#fff;--tx:#14181f;--mut:#667085;--ac:#0b5cad;--acx:#fff;--bad:#c0262d;--ok:#157347;--warn:#b45309;--bd:#dde2ea;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1318;--card:#182029;--tx:#eaeef4;--mut:#93a0b2;--ac:#5aa7f5;--acx:#08121f;--bad:#ff7b80;--ok:#5fd193;--warn:#fbbf24;--bd:#2a3542}}
-:root[data-theme="dark"]{--bg:#0f1318;--card:#182029;--tx:#eaeef4;--mut:#93a0b2;--ac:#5aa7f5;--acx:#08121f;--bad:#ff7b80;--ok:#5fd193;--warn:#fbbf24;--bd:#2a3542}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 "Segoe UI",Roboto,system-ui,sans-serif}
-main{max-width:520px;margin:0 auto;padding:14px 14px 90px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
-.mut{color:var(--mut);font-size:14px}
-.num{font-size:44px;font-weight:700;letter-spacing:-1px;color:var(--ok);line-height:1.1;margin:4px 0}
-.num.neg{color:var(--bad)}.num.warn{color:var(--warn)}
-.neg{color:var(--bad)}.warn{color:var(--warn)}
-.toast{position:fixed;left:14px;right:14px;bottom:calc(70px + env(safe-area-inset-bottom,0px));background:var(--tx);color:var(--bg);padding:12px 14px;border-radius:10px;font-weight:600;z-index:30}
-.row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--bd)}
-.row:last-child{border-bottom:0}
-input,select{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px;min-width:0;width:100%;box-sizing:border-box}
-input[type=checkbox]{width:22px;height:22px;flex:none}
-textarea{font:inherit;width:100%;box-sizing:border-box;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:10px;margin-top:8px}
-button{font:inherit;border:0;border-radius:8px;padding:11px 14px;background:var(--ac);color:var(--acx);font-weight:600}
-button.sec{background:transparent;color:var(--ac);border:1px solid var(--bd)}
-button.x{background:transparent;color:var(--mut);padding:6px 10px}
-.bt{display:inline-block;border:1px solid var(--bd);border-radius:8px;padding:11px 14px;color:var(--ac);font-weight:600}
-.f{display:flex;gap:8px;margin-bottom:8px;align-items:center}
-h2{font-size:17px;margin:0 0 10px}
-label{display:block;font-size:14px;color:var(--mut);margin:10px 0 4px}
-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav button{flex:1;background:transparent;color:var(--mut);border-radius:0;padding:14px 2px;font-size:13px}
-nav button.on{color:var(--ac);box-shadow:inset 0 3px 0 var(--ac)}
-.tb{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:4px;padding:7px 4px;border-bottom:1px solid var(--bd);font-size:14px}
-.tb[data-d]{cursor:pointer}
-.td{background:var(--bg);font-weight:700}
-.bar{height:12px;border-radius:6px;background:var(--bd);overflow:hidden;margin:10px 0}
-.bar i{display:block;height:100%;background:var(--ok);transition:width .4s}
-.bar.warn i{background:var(--warn)}.bar.neg i{background:var(--bad)}
-body.pv #m,body.pv nav{filter:blur(16px)}
-.pie{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:center;padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));background:var(--card);border-top:1px solid var(--bd);z-index:5}
-.serif{font-family:'Playfair Display',Georgia,'Times New Roman',serif}
-.hero{min-height:72vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 8px}
-.hero .moneda{font-size:68px;line-height:1}
-.hero-t{font-size:46px;font-weight:800;line-height:1.1;margin-top:10px}
-.hero-s{font-size:30px;font-weight:700;color:var(--ac);margin-top:2px}
-.hero-p{font-family:Poppins,'Segoe UI',system-ui,sans-serif;color:var(--mut);margin:16px 0 26px;font-size:17px}
+:root {
+  --bg: #F5F1EB;
+  --bg-soft: #EDE8E0;
+  --card: #FFFFFF;
+  --tx: #1A1F1C;
+  --mut: #6B756F;
+  --ac: #1B6B4A;
+  --ac-soft: #E6F2EC;
+  --acx: #FFFFFF;
+  --ok: #1B6B4A;
+  --warn: #B86E1E;
+  --bad: #C23B3B;
+  --bd: #E5DFD6;
+  --shadow: 0 4px 24px rgba(26, 31, 28, 0.06), 0 1px 3px rgba(26, 31, 28, 0.04);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Outfit', system-ui, sans-serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121614;
+    --bg-soft: #1C221F;
+    --card: #1A211D;
+    --tx: #F0F2F0;
+    --mut: #9AA59D;
+    --ac: #3D9B6E;
+    --ac-soft: #1E3328;
+    --acx: #0A120E;
+    --ok: #3D9B6E;
+    --warn: #E09A3E;
+    --bad: #E86A6A;
+    --bd: #2A332E;
+    --shadow: 0 4px 24px rgba(0,0,0,0.25);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121614;
+  --bg-soft: #1C221F;
+  --card: #1A211D;
+  --tx: #F0F2F0;
+  --mut: #9AA59D;
+  --ac: #3D9B6E;
+  --ac-soft: #1E3328;
+  --acx: #0A120E;
+  --ok: #3D9B6E;
+  --warn: #E09A3E;
+  --bad: #E86A6A;
+  --bd: #2A332E;
+  --shadow: 0 4px 24px rgba(0,0,0,0.25);
+}
+:root[data-theme="light"] {
+  --bg: #F5F1EB;
+  --bg-soft: #EDE8E0;
+  --card: #FFFFFF;
+  --tx: #1A1F1C;
+  --mut: #6B756F;
+  --ac: #1B6B4A;
+  --ac-soft: #E6F2EC;
+  --acx: #FFFFFF;
+  --ok: #1B6B4A;
+  --warn: #B86E1E;
+  --bad: #C23B3B;
+  --bd: #E5DFD6;
+  --shadow: 0 4px 24px rgba(26, 31, 28, 0.06), 0 1px 3px rgba(26, 31, 28, 0.04);
+}
+html { scroll-padding-top: env(safe-area-inset-top, 0px); scroll-behavior: smooth; }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--tx);
+  font: 16px/1.5 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, rgba(27, 107, 74, 0.07), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, rgba(184, 110, 30, 0.05), transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+main {
+  position: relative;
+  z-index: 1;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 20px 20px 100px;
+}
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(229, 223, 214, 0.6);
+}
+.mut { color: var(--mut); font-size: 0.9375rem; }
+.num {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ok);
+  line-height: 1.05;
+  margin: 6px 0 10px;
+}
+.num.neg { color: var(--bad); }
+.num.warn { color: var(--warn); }
+.neg { color: var(--bad); }
+.warn { color: var(--warn); }
+.toast {
+  position: fixed;
+  left: 14px; right: 14px;
+  bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  background: var(--tx);
+  color: var(--bg);
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-weight: 600;
+  z-index: 30;
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--bd);
+}
+.row:last-child { border-bottom: 0; }
+.row b { font-weight: 600; }
+input, select {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--tx);
+  background: var(--bg);
+  border: 1.5px solid var(--bd);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  min-width: 0;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus { border-color: var(--ac); }
+input[type=checkbox] { width: 22px; height: 22px; flex: none; }
+textarea {
+  font-family: var(--font-body);
+  width: 100%;
+  box-sizing: border-box;
+  color: var(--tx);
+  background: var(--bg);
+  border: 1.5px solid var(--bd);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-top: 8px;
+}
+button {
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  border: 0;
+  border-radius: 999px;
+  padding: 13px 22px;
+  background: var(--ac);
+  color: var(--acx);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s;
+}
+button:active { transform: scale(0.97); }
+button.sec {
+  background: transparent;
+  color: var(--ac);
+  border: 1.5px solid var(--bd);
+}
+button.sec:hover { background: var(--ac-soft); border-color: var(--ac); }
+button.x, button.ghost {
+  background: transparent;
+  color: var(--mut);
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.bt {
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--bd);
+  border-radius: 999px;
+  padding: 11px 16px;
+  color: var(--ac);
+  font-weight: 600;
+  text-decoration: none;
+  background: transparent;
+}
+.bt.wa { color: #25D366; border-color: #25D366; }
+.f { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+h2 { font-size: 1.05rem; margin: 0 0 10px; font-weight: 700; }
+label { display: block; font-size: 0.8125rem; font-weight: 500; color: var(--mut); margin: 10px 0 4px; letter-spacing: 0.01em; }
+nav {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  background: var(--card);
+  border-top: 1px solid var(--bd);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  z-index: 10;
+  max-width: 440px;
+  margin: 0 auto;
+}
+nav button {
+  flex: 1;
+  background: transparent;
+  color: var(--mut);
+  border-radius: 0;
+  padding: 12px 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+nav button.on { color: var(--ac); }
+.tb {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr 1fr;
+  gap: 4px;
+  padding: 7px 4px;
+  border-bottom: 1px solid var(--bd);
+  font-size: 14px;
+}
+.tb[data-d] { cursor: pointer; }
+.td { background: var(--bg); font-weight: 700; }
+.bar {
+  height: 10px;
+  border-radius: 99px;
+  background: var(--bd);
+  overflow: hidden;
+  margin: 12px 0 8px;
+}
+.bar i {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+  border-radius: 99px;
+  transition: width 0.5s ease;
+}
+.bar.warn i { background: var(--warn); }
+.bar.neg i { background: var(--bad); }
+body.pv #m, body.pv nav { filter: blur(16px); }
+.pie {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0));
+  background: rgba(245, 241, 235, 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--bd);
+  z-index: 10;
+  max-width: 440px;
+  margin: 0 auto;
+}
+:root[data-theme="dark"] .pie { background: rgba(18, 22, 20, 0.92); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .pie { background: rgba(18, 22, 20, 0.92); }
+}
+.pie button { min-width: 120px; }
+.serif, .display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 8px 24px;
+  min-height: 58vh;
+  justify-content: center;
+}
+.hero .moneda, .hero-icon {
+  width: 88px;
+  height: 88px;
+  border-radius: 28px;
+  background: linear-gradient(145deg, #E6F2EC 0%, #D4EBE0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  margin-bottom: 28px;
+  box-shadow: 0 8px 32px rgba(27, 107, 74, 0.12);
+}
+.hero-t {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 7vw, 2.6rem);
+  font-weight: 800;
+  margin: 0 0 6px;
+  letter-spacing: -0.03em;
+}
+.hero-s {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--ac);
+  margin: 0 0 16px;
+}
+.hero-p {
+  color: var(--mut);
+  font-size: 1.05rem;
+  max-width: 280px;
+  margin: 0 0 28px;
+}
+.paso {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ac);
+  color: white;
+  font-weight: 700;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.resultado {
+  margin-top: 12px;
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  font-weight: 800;
+  color: var(--ok);
+  text-align: center;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.resultado span {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--mut);
+  display: block;
+  margin-top: 4px;
+}
+.grande {
+  font-family: var(--font-display);
+  font-size: 3.2rem;
+  font-weight: 800;
+  color: var(--ok);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+.chip {
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.8125rem;
+  background: var(--bg-soft);
+  color: var(--tx);
+  border: 1px solid transparent;
+  font-weight: 600;
+}
+.chip.on {
+  background: var(--ac);
+  color: var(--acx);
+}
+.copyright {
+  text-align: center;
+  font-size: 12px;
+  color: var(--mut);
+  margin: 18px 0 8px;
+  opacity: 0.85;
+  letter-spacing: 0.01em;
+}
+.copyright::before {
+  content: '';
+}
 </style></head><body>
 <main id="m"></main>
 <nav><button data-t="plan">Plan</button><button data-t="hoy">Hoy</button><button data-t="dias">Días</button><button data-t="ajustes">Ajustes</button></nav>
@@ -274,6 +618,35 @@ function migrarEstado(S) {
   return S;
 }
 
+/* Copias de seguridad: ¿hay que avisar que hace días que no se guarda una?
+   - S.ultimaCopia: cuándo se guardó la última (milisegundos).
+   - S.diasCopia: cada cuántos días recordar (7 por defecto, 0 = nunca).
+   - S.posponerCopia: hasta cuándo no molestar después de tocar "Más tarde".
+   Si nunca se guardó una, se avisa recién cuando ya hay algunos gastos anotados. */
+function estadoCopia(S, ahora) {
+  const cada = S.diasCopia === undefined ? 7 : S.diasCopia;
+  const dias = S.ultimaCopia ? Math.max(0, Math.floor((ahora - S.ultimaCopia) / MS_DIA)) : null;
+  const pospuesto = !!S.posponerCopia && ahora < S.posponerCopia;
+  let avisar = false;
+  if (cada > 0 && !pospuesto) avisar = dias === null ? (S.spent || []).length >= 3 : dias >= cada;
+  return { dias, avisar, cada };
+}
+
+/* Racha en verde: días seguidos (hasta ayer) sin pasarse del presupuesto.
+   `ultimos` son los últimos 7 días cerrados, del más viejo al más nuevo (true = en verde). */
+function rachaEnVerde(S, hoy) {
+  const dias = diasDelPeriodo(S, hoy), hoyIdx = calcular(S, hoy).hoyIdx;
+  let racha = 0;
+  for (let i = hoyIdx - 1; i >= 0 && dias[i].sobra >= 0; i--) racha++;
+  const ultimos = [];
+  for (let i = Math.max(0, hoyIdx - 7); i < hoyIdx; i++) ultimos.push(dias[i].sobra >= 0);
+  return { racha, ultimos };
+}
+
+/* Categorías rápidas para anotar un gasto en dos toques */
+const CATEGORIAS_GASTO = [['🍔', 'Comida'], ['🚌', 'Transporte'], ['🛒', 'Súper'], ['🎉', 'Salidas'], ['💊', 'Salud'], ['✨', 'Otro']];
+const emojiCategoria = cat => { const c = CATEGORIAS_GASTO.find(x => x[1] === cat); return c ? c[0] + ' ' : ''; };
+
 /* Textos del día */
 const FRASES = ['Cada peso anotado es un peso que controlás.','Gastar con intención rinde más que gastar con culpa.','Hoy un pequeño ahorro, mañana una gran tranquilidad.','Lo que no se anota se escapa.','Pagá primero lo importante y vivé con lo que sobra.','Un día en verde es un buen día.','No es cuánto ganás, es cuánto te queda.','Ahorrar no es privarse, es elegir.','Pasito a pasito se junta la meta.','Revisar tus números es cuidarte.','La constancia le gana a la urgencia.','Una meta clara se junta más rápido.','Antes de comprar, esperá un día.','Tu yo del mes que viene te lo va a agradecer.','Lo barato sale caro si no lo necesitás.','Un imprevisto no arruina el mes, se reparte.','Anotar toma diez segundos, ordenarse rinde todo el mes.','Cuidá los pesos chicos, son los que más se escapan.','Cada ahorro suma, aunque sea chico.','Planificar es tener tranquilidad.','Gastá en lo que te acerca a tus metas.','El orden es la mitad del ahorro.','Hoy es un buen día para anotar todo.','La plata ordenada alcanza para más.','Poco por día, mucho al final.','Pensá en tu meta cada vez que dudes.','Lo que juntás hoy es libertad mañana.','Un presupuesto es una guía, no una cárcel.','Respirá antes de comprar.','Seguí así, vas mejor de lo que creés.'];
 const fraseDelDia = hoy => FRASES[numeroDeDia(hoy) % FRASES.length];
@@ -290,7 +663,10 @@ function fraseDeEstado(c, clase) {
    Misma clave de siempre, así que los datos de versiones anteriores
    siguen funcionando sin migrar nada.
    ===================================================================== */
-const VERSION = '9.0';
+const VERSION = '9.3';
+const AUTOR = 'Martín Enrique Bustos';
+const AUTOR_EMAIL = 'bustosmartin181@gmail.com';
+const AUTOR_WA = '5492612168515';
 const CLAVE_DATOS = 'miplata_v2';
 
 let S = cargarEstado();
@@ -319,7 +695,8 @@ const nombreUsuario = () => S.nombre === undefined ? '' : S.nombre;
 /* Estado de la pantalla (no se guarda) */
 const UI = {
   pestana: 'hoy',
-  paso: 0,               // introducción: 0 bienvenida, 1 ingresos, 2 gastos importantes
+  paso: 0,               // introducción: 0 bienvenida, 1 cómo funciona, 2 confianza, 3 ingresos, 4 gastos, 5 listo
+  categoria: '',         // categoría elegida para el gasto que se está anotando
   editando: null,        // id del gasto que se está editando
   borrador: {},          // monto y detalle que llegan por voz o foto
   ajustePendiente: null, // diferencia de cuentas esperando confirmación
@@ -331,7 +708,7 @@ const UI = {
    04 · SEGURIDAD — PIN, bloqueo automático y ocultar el dinero del mes.
    ===================================================================== */
 const ACCIONES_PROTEGIDAS = [
-  'ajustarCuentas', 'csvDias', 'csvImportantes', 'copia', 'restaurar', 'borrarTodo', 'restaurarCierre'];
+  'ajustarCuentas', 'csvDias', 'csvImportantes', 'guardarNube', 'recuperarNube', 'restaurar', 'borrarTodo', 'restaurarCierre'];
 
 let bloqueada = !!S.pin && S.pinApp !== false;
 let intentos = leerIntentos();
@@ -514,7 +891,7 @@ async function preguntarAClaude(pregunta) {
     base_por_dia: Math.round(c.base), te_queda_hoy: Math.round(c.quedaHoy),
     presupuesto_manana: c.manana == null ? null : Math.round(c.manana),
     saldo_del_periodo: Math.round(c.saldo),
-    gastos_diarios: S.spent.map(e => ({ fecha: e.date, monto: e.amt, detalle: e.note || '' })),
+    gastos_diarios: S.spent.map(e => ({ fecha: e.date, monto: e.amt, detalle: e.note || '', categoria: e.cat || '' })),
   };
   try {
     const r = await ia('Sos un asistente de finanzas personales en Argentina (pesos). Respondé en español rioplatense, breve y claro, con números concretos. Usá solo estos datos:\n' +
@@ -626,31 +1003,44 @@ const csvDe = filas => '\ufeff' + filas.map(f => f.map(x => {
   x = String(x); return /[;"\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x;
 }).join(';')).join('\r\n');
 
+/* Muestra el contenido para copiarlo a mano cuando no se pudo guardar el archivo */
+function mostrarTextoParaCopiar(texto) {
+  UI.pestana = 'ajustes'; dibujar();
+  const caja = document.getElementById('bk');
+  if (caja) {
+    caja.value = texto; if (caja.select) caja.select();
+    const detalle = caja.closest && caja.closest('details'); if (detalle) detalle.open = true;
+  }
+  aviso('No se pudo guardar el archivo. Copiá el texto de la caja y guardalo en una nota o en Drive.');
+}
+
+/* Guarda un archivo. Devuelve true si se guardó o se mandó a algún lado, false si no. */
 async function descargar(nombre, texto) {
   const plugins = window.Capacitor && window.Capacitor.Plugins;
-  if (CONFIG.apk && plugins && plugins.Filesystem && plugins.Share) {   // app Android: guardar y abrir el menú de compartir
+  if (CONFIG.apk && plugins && plugins.Filesystem && plugins.Share) {   // app Android: menú de compartir (Drive, etc.)
     try {
       const archivo = await plugins.Filesystem.writeFile({ path: nombre, data: texto, directory: 'CACHE', encoding: 'utf8' });
       await plugins.Share.share({ title: nombre, url: archivo.uri, dialogTitle: 'Guardar o enviar ' + nombre });
-    } catch (e) { if (!/cancel/i.test(String((e && e.message) || e))) aviso('No se pudo guardar el archivo.'); }
-    return;
+      return true;
+    } catch (e) {
+      if (/cancel/i.test(String((e && e.message) || e))) return false;   // la persona cerró el menú
+      mostrarTextoParaCopiar(texto); return false;
+    }
   }
   let servicio = null;
   try { servicio = CONFIG.claude && window.claude ? await window.claude.use('downloads') : null; } catch (_) {}
   if (servicio) {                                  // dentro de Claude
-    try { await servicio.save({ filename: nombre, data: texto }); }
-    catch (e) { if (!e || e.code !== 'declined') aviso('No se pudo guardar el archivo.'); }
-    return;
+    try { await servicio.save({ filename: nombre, data: texto }); return true; }
+    catch (e) { if (!e || e.code !== 'declined') aviso('No se pudo guardar el archivo.'); return false; }
   }
   if (!CONFIG.claude) try {                        // en un sitio normal (PWA)
     const url = URL.createObjectURL(new Blob([texto], { type: 'text/plain;charset=utf-8' }));
     const a = document.createElement('a'); a.href = url; a.download = nombre;
     document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 3000);
-    return;
+    return true;
   } catch (_) {}
-  const caja = document.getElementById('bk');       // último recurso: mostrar el texto
-  if (caja) { caja.value = texto; caja.select(); }
-  aviso('No se puede descargar acá. Copiá el texto de la caja.');
+  mostrarTextoParaCopiar(texto);
+  return false;
 }
 
 /* =====================================================================
@@ -660,6 +1050,10 @@ async function descargar(nombre, texto) {
 const campoDinero = () => dineroOculto() ? 'password' : 'text';        // los montos se ven con puntos si están ocultos
 const filaDoble = (izquierda, derecha) => `<div class="row"><span>${izquierda}</span><b>${derecha}</b></div>`;
 const botonOjo = () => `<button class="x" data-a="mostrarOcultar">${etiquetaOjo()}</button>`;
+/* Copyright + autor en todas las pantallas */
+const pieCopyright = () =>
+  `<div class="copyright">© 2026 ${AUTOR}</div>`;
+const iconoWhatsApp = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-3px;margin-right:6px"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`;
 
 /* ------------------------------ HOY ------------------------------ */
 function pantallaHoy(c) {
@@ -672,13 +1066,37 @@ function pantallaHoy(c) {
       `<div class="mut">${fraseDeEstado(c, clase)}</div><div class="mut" style="margin-top:4px;font-style:italic">“${fraseDelDia(hoy)}”</div>` +
       `<button class="sec" data-a="resumen" style="margin-top:8px;padding:8px 12px">Compartir resumen</button></div>`,
     S.sueldo ? '' : '<div class="card mut">Primero cargá tu sueldo en Ajustes y revisá tus gastos importantes.</div>',
+    tarjetaAvisoCopia(),
     tarjetaQuedaHoy(c, clase, mensaje, presupuesto, porcentaje),
+    tarjetaRacha(),
     tarjetaSaldo(c),
     tarjetaCuentas(c),
     tarjetaAnotarGasto(editado, hoy),
     tarjetaRecalibrar(c),
     tarjetaGastosAnotados(),
   ].join('');
+}
+
+/* Racha en verde con puntitos de los últimos días */
+function tarjetaRacha() {
+  const r = rachaEnVerde(S, hoyISO());
+  if (!r.ultimos.length) return '';
+  const puntos = r.ultimos.map(ok => `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;margin-right:6px;background:${ok ? 'var(--ok)' : 'var(--bad)'}"></span>`).join('');
+  const mensaje = r.racha === 0 ? 'Hoy podés empezar una racha: terminá el día sin pasarte.'
+    : r.racha >= 7 ? '¡Una semana entera o más en verde!' : r.racha >= 3 ? '¡Vas muy bien, no cortes la racha!' : 'Buen comienzo.';
+  return `<div class="card"><div style="font-weight:700">🔥 Racha en verde: ${r.racha} ${r.racha === 1 ? 'día' : 'días'}</div>` +
+    `<div style="margin:8px 0">${puntos}</div><div class="mut">${mensaje}</div></div>`;
+}
+
+/* Aviso en Hoy cuando hace días que no se guarda una copia (no aparece dentro de Claude, que ya sincroniza) */
+function tarjetaAvisoCopia() {
+  if (CONFIG.nube) return '';
+  const e = estadoCopia(S, Date.now());
+  if (!e.avisar) return '';
+  const texto = e.dias === null ? 'Todavía no guardaste ninguna copia de tus datos.' : `Hace ${e.dias} días que no guardás una copia de tus datos.`;
+  return `<div class="card" style="border-color:var(--warn)"><div style="font-weight:600">☁️ ${texto}</div>` +
+    '<div class="mut" style="margin:4px 0 10px">Si cambiás de teléfono o lo formateás, sin copia se pierde todo.</div>' +
+    '<div class="f" style="margin:0"><button data-a="guardarNube">Guardar ahora</button><button class="sec" data-a="posponerCopia">Más tarde</button></div></div>';
 }
 
 function tarjetaQuedaHoy(c, clase, mensaje, presupuesto, porcentaje) {
@@ -724,13 +1142,19 @@ function tarjetaCuentas(c) {
 }
 
 function tarjetaAnotarGasto(editado, hoy) {
-  const monto = editado ? editado.amt : (UI.borrador.amt || ''), detalle = editado ? (editado.note || '') : (UI.borrador.note || '');
+  const b = UI.borrador;      // lo que ya se escribió pero todavía no se anotó
+  const monto = b.amt !== undefined ? b.amt : (editado ? editado.amt : '');
+  const detalle = b.note !== undefined ? b.note : (editado ? (editado.note || '') : '');
+  const fecha = b.date !== undefined ? b.date : (editado ? editado.date : hoy);
+  const categorias = '<div class="f" style="flex-wrap:wrap;gap:6px">' + CATEGORIAS_GASTO.map(([emoji, nombre]) =>
+    `<button class="chip${UI.categoria === nombre ? ' on' : ''}" data-a="categoria" data-v="${nombre}">${emoji} ${nombre}</button>`).join('') + '</div>';
   const atajos = editado ? '' :
     '<div class="f"><button class="sec" data-a="dictar">🎤 Dictar</button>' +
     (CONFIG.claude ? '<label class="bt">📷 Foto de ticket<input id="ph" type="file" accept="image/*" capture="environment" hidden></label>' : '') + '</div>';
   return `<div class="card"><h2>${editado ? 'Editar gasto' : 'Anotar gasto'}</h2>` +
-    `<div class="f"><input id="am" inputmode="decimal" placeholder="Monto" value="${monto}"><input id="nt" placeholder="Detalle (opcional)" value="${escapar(detalle)}"></div>` + atajos +
-    `<div class="f"><input id="dt" type="date" value="${editado ? editado.date : hoy}"><button data-a="anotar">${editado ? 'Guardar cambios' : 'Anotar gasto'}</button>` +
+    `<div class="f"><input id="am" inputmode="decimal" placeholder="Monto" value="${escapar(monto)}"><input id="nt" placeholder="Detalle (opcional)" value="${escapar(detalle)}"></div>` +
+    categorias + atajos +
+    `<div class="f"><input id="dt" type="date" value="${fecha}"><button data-a="anotar">${editado ? 'Guardar cambios' : 'Anotar gasto'}</button>` +
     (editado ? '<button class="sec" data-a="cancelarEdicion">Cancelar</button>' : '') + '</div></div>';
 }
 
@@ -743,7 +1167,7 @@ function tarjetaRecalibrar(c) {
 function tarjetaGastosAnotados() {
   const lista = [...S.spent].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id).slice(0, 60);
   return '<div class="card"><h2>Gastos anotados</h2>' + (lista.length
-    ? lista.map(e => `<div class="row"><span>${diaYMes(e.date)} ${escapar(e.note || '')}</span><span><b>${pesos(e.amt)}</b>` +
+    ? lista.map(e => `<div class="row"><span>${diaYMes(e.date)} ${emojiCategoria(e.cat)}${escapar(e.note || e.cat || '')}</span><span><b>${pesos(e.amt)}</b>` +
         `<button class="x" data-a="editar" data-i="${e.id}">✎</button><button class="x" data-a="borrar" data-i="${e.id}">✕</button></span></div>`).join('')
     : '<div class="mut">Todavía no anotaste gastos.</div>') + '</div>';
 }
@@ -772,7 +1196,7 @@ function ventanaDia(iso) {
     (dia ? `<div class="mut" style="margin-bottom:6px">Presupuesto del día ${pesos(dia.presupuesto)}</div>` : '') +
     (cierre ? `<div class="mut" style="margin-bottom:6px">🔒 Cerrado: gastado ${pesos(cierre.g)}, sobrante ${pesos(cierre.l)}${Math.abs(cierre.g - total) > 0.5 ? ' <b class="neg">· cambió después del cierre</b>' : ''}</div>` : '') +
     (gastos.length
-      ? gastos.map(e => `<div class="row"><span>${escapar(e.note || 'Sin detalle')}</span><span><b>${pesos(e.amt)}</b><button class="x" data-ed="${e.id}">✎</button></span></div>`).join('') + filaDoble('Total del día', pesos(total))
+      ? gastos.map(e => `<div class="row"><span>${emojiCategoria(e.cat)}${escapar(e.note || e.cat || 'Sin detalle')}</span><span><b>${pesos(e.amt)}</b><button class="x" data-ed="${e.id}">✎</button></span></div>`).join('') + filaDoble('Total del día', pesos(total))
       : '<div class="mut" style="margin:10px 0">No hay gastos anotados este día.</div>'),
     380, 20, 'max-height:80vh;overflow:auto');
   m.onclick = ev => {
@@ -834,31 +1258,65 @@ function tarjetaCuotas() {
 
 /* ------------------------------ INTRODUCCIÓN (primera vez) ------------------------------ */
 function pantallaBienvenida() {
-  const c = calcular(S, hoyISO()), nombre = nombreUsuario();
+  const c = calcular(S, hoyISO()), nombre = nombreUsuario(), paso = UI.paso;
   const pie = (conAtras, texto) => '<div class="pie">' + (conAtras ? '<button class="sec" data-a="pasoAtras">← Atrás</button>' : '<span></span>') +
     `<button data-a="pasoSiguiente">${texto}</button></div>`;
   const titulo = (grande, chico) => `<div style="margin:6px 2px 16px"><div class="serif" style="font-size:28px;font-weight:800;line-height:1.15">${grande}</div><div class="mut" style="margin-top:6px">${chico}</div></div>`;
 
   /* 0 · Bienvenida: una pantalla aparte, solo para dar la bienvenida */
-  if (UI.paso === 0)
+  if (paso === 0)
     return `<div class="hero"><div class="moneda">💰</div><div class="serif hero-t">Bienvenido${nombre ? ',<br>' + escapar(nombre) : ''}</div>` +
       '<div class="serif hero-s">a Mi plata</div><p class="hero-p">Ordená tu plata, un día a la vez.</p>' +
-      `<input data-f="nombre" value="${escapar(nombre)}" placeholder="¿Cómo te llamás? (opcional)" style="max-width:320px;text-align:center"></div>` +
-      pie(false, 'Comenzar →');
+      `<input data-f="nombre" value="${escapar(nombre)}" placeholder="¿Cómo te llamás? (opcional)" style="max-width:320px;text-align:center">` +
+      pieCopyright() + '</div>' + pie(false, 'Comenzar →');
 
-  /* 1 · Hoja en blanco para los ingresos */
-  if (UI.paso === 1)
+  /* 1 · Cómo funciona, con un ejemplo con números */
+  if (paso === 1)
+    return titulo('Así funciona', 'Tres pasos y listo.') + '<div class="card">' +
+      [['1', 'Cargás lo que cobrás.'], ['2', 'Anotás lo que pagás sí o sí: alquiler, servicios, tarjetas.'], ['3', 'Lo que sobra se divide entre los días del mes.']]
+        .map(([n, t]) => `<div class="f" style="align-items:flex-start"><span class="paso">${n}</span><span>${t}</span></div>`).join('') + '</div>' +
+      '<div class="card"><div class="mut" style="margin-bottom:6px">Un ejemplo</div>' + filaDoble('Cobrás', pesos(1000000)) + filaDoble('Pagás sí o sí', '− ' + pesos(400000)) +
+      filaDoble('Te quedan para 30 días', pesos(600000)) + `<div class="resultado">${pesos(20000)}<span> por día</span></div></div>` +
+      '<div class="mut">Si hoy gastás menos, <b>lo que sobra pasa a mañana</b>. Si te pasás, mañana tenés un poco menos.</div>' +
+      '<div class="mut" style="margin-top:10px;font-size:13px">Además: metas de ahorro, cuotas, PIN, copias de seguridad y un resumen para compartir.</div>' +
+      pieCopyright() + pie(true, 'Siguiente →');
+
+  /* 2 · Confianza: qué pasa con los datos */
+  if (paso === 2) {
+    const puntos = CONFIG.nube
+      ? ['Sin anuncios.', 'Tus datos se guardan en tu cuenta de Claude: nadie más los ve.', 'Podés ponerle PIN a la app.', 'Podés guardar una copia cuando quieras.']
+      : ['Sin cuenta ni registro.', 'Sin anuncios.', 'Tus números se guardan en tu teléfono y solo salen si vos guardás una copia.',
+         'No pide acceso a tus contactos, ubicación, cámara ni micrófono.', 'Podés ponerle PIN para que nadie vea tus números.', 'Las copias las guardás vos, en tu Drive.'];
+    return titulo('Tu plata, tu decisión', 'Lo que tenés que saber antes de empezar.') + '<div class="card">' +
+      puntos.map(t => `<div class="f" style="align-items:flex-start"><span style="color:var(--ok);font-weight:700">✓</span><span>${t}</span></div>`).join('') + '</div>' +
+      (CONFIG.apk ? '<div class="mut" style="font-size:13px">Podés comprobar los permisos en Ajustes de Android → Apps → Mi plata → Permisos.</div>' : '') +
+      pieCopyright() + pie(true, 'Siguiente →');
+  }
+
+  /* 3 · Hoja en blanco para los ingresos */
+  if (paso === 3)
     return titulo('¿De dónde viene tu plata?', 'Elegí la categoría de cada ingreso y escribí cuánto es. Paso 1 de 2.') + tarjetaIngresos(true) +
       `<div class="card"><h2>📅 ¿Cuándo cobrás?</h2><label style="margin-top:0">Día que cobrás (inicio del mes)</label><input type="date" data-f="inicio" value="${S.start}">` +
-      `<label>Próximo cobro (fin)</label><input type="date" data-f="fin" value="${S.end}"></div>` + pie(true, 'Siguiente →');
+      `<label>Próximo cobro (fin)</label><input type="date" data-f="fin" value="${S.end}"></div>` +
+      pieCopyright() + pie(true, 'Siguiente →');
 
-  /* 2 · Gastos importantes */
-  return titulo('Tus gastos importantes', 'Lo primero que pagás al cobrar: alquiler, servicios, tarjetas, cuotas. Paso 2 de 2.') +
-    tarjetaGastosImportantes() + tarjetaCuotas() +
-    `<div class="card"><label style="margin-top:0">Saldo previo en cuenta (opcional)</label><input data-f="previo" inputmode="decimal" value="${S.previo || ''}" placeholder="Lo que te quedó del mes anterior"></div>` +
-    '<div class="card"><h2>Así queda tu mes</h2>' + filaDoble('Ingresos', pesos(totalIngresos(S))) + filaDoble('Gastos importantes', pesos(c.total)) +
-    filaDoble('Te queda para el día a día', pesos(c.disp)) + filaDoble('Eso es por día', pesos(c.dias ? c.disp / c.dias : 0)) + '</div>' +
-    pie(true, 'Empezar →');
+  /* 4 · Gastos importantes */
+  if (paso === 4)
+    return titulo('Tus gastos importantes', 'Lo primero que pagás al cobrar: alquiler, servicios, tarjetas, cuotas. Paso 2 de 2.') +
+      tarjetaGastosImportantes() + tarjetaCuotas() +
+      `<div class="card"><label style="margin-top:0">Saldo previo en cuenta (opcional)</label><input data-f="previo" inputmode="decimal" value="${S.previo || ''}" placeholder="Lo que te quedó del mes anterior"></div>` +
+      '<div class="card"><h2>Así queda tu mes</h2>' + filaDoble('Ingresos', pesos(totalIngresos(S))) + filaDoble('Gastos importantes', pesos(c.total)) +
+      filaDoble('Te queda para el día a día', pesos(c.disp)) + '</div>' +
+      pieCopyright() + pie(true, 'Siguiente →');
+
+  /* 5 · Listo: el resultado, en grande */
+  const porDia = c.dias ? c.disp / c.dias : 0;
+  return `<div class="hero"><div class="moneda">🎉</div><div class="serif" style="font-size:30px;font-weight:800;line-height:1.15;margin-top:10px">Listo${nombre ? ', ' + escapar(nombre) : ''}.<br>Tu plan está armado.</div>` +
+    (porDia > 0
+      ? `<div class="mut" style="margin-top:26px">Podés gastar unos</div><div class="grande">${pesos(porDia)}</div><div class="mut">por día durante ${c.dias} días</div>` +
+        '<p class="hero-p" style="margin-top:18px">Lo que no gastes hoy, pasa a mañana.</p>'
+      : '<p class="hero-p" style="margin-top:18px">Tus gastos importantes superan lo que cobrás. Volvé atrás y revisá los montos.</p>') +
+    pieCopyright() + '</div>' + pie(true, 'Empezar →');
 }
 
 function tarjetaMetas() {
@@ -890,8 +1348,18 @@ function pantallaClaude() {
 
 /* ------------------------------ AJUSTES ------------------------------ */
 function pantallaAjustes(c) {
-  return [tarjetaPin(), tarjetaApariencia(), tarjetaPeriodo(), tarjetaNuevoPeriodo(c), tarjetaCierreNocturno(), tarjetaCopias(),
+  return [tarjetaPin(), tarjetaApariencia(), tarjetaPeriodo(), tarjetaNuevoPeriodo(c), tarjetaCierreNocturno(), tarjetaNube(), tarjetaExcel(),
+    tarjetaAcercaDe(),
     '<div class="card"><h2>Empezar de cero</h2><button class="sec" data-a="borrarTodo">Borrar todo</button></div>'].join('');
+}
+
+function tarjetaAcercaDe() {
+  return '<div class="card"><h2>ℹ️ Acerca de</h2><div style="font-weight:700">Mi plata</div><div class="mut">Versión ' + VERSION + '</div>' +
+    '<div style="margin:10px 0">Hecha por <b>' + AUTOR + '</b>. ¿Dudas, ideas o algo que no anda? Escribime.</div>' +
+    '<div class="f" style="flex-wrap:wrap">' +
+    '<a class="bt wa" href="https://wa.me/' + AUTOR_WA + '" target="_blank" rel="noopener">' + iconoWhatsApp + 'WhatsApp</a>' +
+    '<a class="bt" href="mailto:' + AUTOR_EMAIL + '">✉️ ' + AUTOR_EMAIL + '</a></div>' +
+    pieCopyright() + '</div>';
 }
 
 function tarjetaPin() {
@@ -938,12 +1406,28 @@ function tarjetaCierreNocturno() {
       : '<div class="mut">Todavía no hay copias.</div>') + '</div>';
 }
 
-function tarjetaCopias() {
-  return '<div class="card"><h2>Excel y copia de seguridad</h2><div class="f" style="flex-wrap:wrap">' +
-    '<button class="sec" data-a="csvDias">Exportar días</button><button class="sec" data-a="csvImportantes">Exportar gastos importantes</button><button class="sec" data-a="copia">Guardar copia</button>' +
-    (CONFIG.nube ? '<button class="sec" data-a="sincronizar">Sincronizar ahora</button>' : '') + '</div>' +
-    '<label>Para restaurar, elegí el archivo o pegá el texto de la copia</label><input id="fi" type="file" accept=".json,.txt"><textarea id="bk" rows="4"></textarea>' +
-    '<div style="margin-top:8px"><button class="sec" data-a="restaurar">Restaurar copia</button></div></div>';
+function tarjetaNube() {
+  const e = estadoCopia(S, Date.now()), cada = S.diasCopia === undefined ? 7 : S.diasCopia;
+  const estado = e.dias === null ? '<span class="warn">Todavía no guardaste ninguna copia.</span>'
+    : `Última copia: ${e.dias === 0 ? 'hoy' : 'hace ' + e.dias + (e.dias === 1 ? ' día' : ' días')}.`;
+  const opciones = [[7, 'cada 7 días'], [3, 'cada 3 días'], [15, 'cada 15 días'], [0, 'no recordarme']]
+    .map(([v, t]) => `<option value="${v}"${cada === v ? ' selected' : ''}>${t}</option>`).join('');
+  return '<div class="card"><h2>☁️ Guardar en la nube</h2><div class="mut" style="margin-bottom:10px">' +
+    (CONFIG.apk ? 'Se abre el menú de Android: elegí <b>Google Drive</b> (o Gmail, WhatsApp, lo que prefieras) y guardá el archivo.'
+                : 'Guarda un archivo con todos tus datos. Subilo a Google Drive o donde prefieras.') + '</div>' +
+    `<div class="f"><button data-a="guardarNube">☁️ Guardar en la nube</button></div><div class="mut" style="margin-bottom:14px">${estado}</div>` +
+    '<h2>📥 Recuperar mis datos</h2><div class="mut" style="margin-bottom:10px">Si cambiaste de teléfono o lo formateaste: instalá la app, tocá este botón y elegí tu copia desde <b>Drive</b> o desde el teléfono.</div>' +
+    '<div class="f"><button class="sec" data-a="recuperarNube">📥 Recuperar desde la nube</button></div>' +
+    '<input id="fi" type="file" accept=".json,.txt,application/json,text/plain" style="display:none">' +
+    (CONFIG.nube ? `<div class="f" style="margin-top:8px"><button class="sec" data-a="sincronizar">Sincronizar con mi cuenta de Claude</button></div><div class="mut">${mensajeNube}</div>` : '') +
+    `<label>Recordarme guardar una copia</label><select data-f="diasCopia">${opciones}</select>` +
+    '<details style="margin-top:12px"><summary class="mut">Avanzado: pegar el texto de una copia</summary><textarea id="bk" rows="4"></textarea>' +
+    '<div style="margin-top:8px"><button class="sec" data-a="restaurar">Restaurar desde el texto</button></div></details></div>';
+}
+
+function tarjetaExcel() {
+  return '<div class="card"><h2>📊 Exportar a Excel</h2><div class="f" style="flex-wrap:wrap">' +
+    '<button class="sec" data-a="csvDias">Exportar días</button><button class="sec" data-a="csvImportantes">Exportar gastos importantes</button></div></div>';
 }
 
 /* ------------------------------ BLOQUEO ------------------------------ */
@@ -984,7 +1468,8 @@ function dibujar() {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === UI.pestana));
   const pantallas = { plan: pantallaPlan, hoy: pantallaHoy, dias: pantallaDias, claude: pantallaClaude, ajustes: pantallaAjustes };
   principal.innerHTML = (pantallas[UI.pestana] || pantallaHoy)(calcular(S, hoyISO())) +
-    '<div class="mut" style="text-align:center;margin-top:8px">Versión ' + VERSION + ' · ' + mensajeNube + '</div>';
+    '<div class="mut" style="text-align:center;margin-top:12px;font-size:13px">Versión ' + VERSION + (mensajeNube ? ' · ' + mensajeNube : '') + '</div>' +
+    pieCopyright();
 }
 
 /* =====================================================================
@@ -995,21 +1480,44 @@ function dibujar() {
 const SIN_GUARDAR = Symbol('sin-guardar');
 const valorDe = id => document.getElementById(id).value;
 
+/* Recupera los datos desde el texto de una copia (archivo elegido o texto pegado) */
+async function restaurarDesdeTexto(texto) {
+  let datos;
+  try {
+    datos = JSON.parse(texto);
+    if (!datos || !datos.items || !datos.spent) throw new Error('copia inválida');
+  } catch (_) { aviso('Ese archivo no es una copia válida de Mi plata.'); return false; }
+  if (!(await confirmar('Esto reemplaza los datos actuales por los de la copia. ¿Seguir?'))) return false;
+  S = migrarEstado(datos);
+  guardar(); dibujar(); aviso('Datos recuperados.');
+  return true;
+}
+
 const ACCIONES = {
   /* --- gastos diarios --- */
   async anotar() {
     const monto = aNumero(valorDe('am'));
     if (!monto) return SIN_GUARDAR;
-    const gasto = { date: valorDe('dt') || hoyISO(), amt: monto, note: valorDe('nt') };
+    const gasto = { date: valorDe('dt') || hoyISO(), amt: monto, note: valorDe('nt'), cat: UI.categoria || undefined };
     if (estaCerrado(S, gasto.date) && !(await confirmar('Ese día ya está cerrado. ¿Anotarlo igual?'))) return SIN_GUARDAR;
     if (UI.editando) {
       const existente = S.spent.find(e => e.id === UI.editando);
       if (existente) Object.assign(existente, gasto);
       UI.editando = null;
-    } else { S.spent.push({ id: Date.now(), ...gasto }); UI.borrador = {}; }
+    } else S.spent.push({ id: Date.now(), ...gasto });
+    UI.borrador = {}; UI.categoria = '';
   },
-  editar(el) { UI.editando = +el.dataset.i; dibujar(); document.getElementById('am').focus(); return SIN_GUARDAR; },
-  cancelarEdicion() { UI.editando = null; dibujar(); return SIN_GUARDAR; },
+  categoria(el) {      // elegir o quitar la categoría sin perder lo que ya se escribió
+    UI.borrador = { amt: valorDe('am'), note: valorDe('nt'), date: valorDe('dt') };
+    UI.categoria = UI.categoria === el.dataset.v ? '' : el.dataset.v;
+    dibujar(); return SIN_GUARDAR;
+  },
+  editar(el) {
+    const gasto = S.spent.find(e => e.id === +el.dataset.i);
+    UI.editando = +el.dataset.i; UI.borrador = {}; UI.categoria = (gasto && gasto.cat) || '';
+    dibujar(); document.getElementById('am').focus(); return SIN_GUARDAR;
+  },
+  cancelarEdicion() { UI.editando = null; UI.borrador = {}; UI.categoria = ''; dibujar(); return SIN_GUARDAR; },
   async borrar(el) {
     const gasto = S.spent.find(x => x.id == el.dataset.i);
     if (gasto && estaCerrado(S, gasto.date) && !(await confirmar('Ese día ya está cerrado. ¿Borrarlo igual?'))) return SIN_GUARDAR;
@@ -1037,12 +1545,11 @@ const ACCIONES = {
   agregarIngreso() { (S.ingresos = S.ingresos || []).push({ cat: CATEGORIAS_INGRESO[0], a: 0 }); },
   quitarIngreso(el) { S.ingresos.splice(+el.dataset.i, 1); },
   pasoSiguiente() {
-    if (UI.paso === 0) { UI.paso = 1; dibujar(); scrollTo(0, 0); return SIN_GUARDAR; }
-    if (UI.paso === 1) {
+    if (UI.paso === 3) {                                  // ingresos: hay que cargar al menos uno
       if (!(totalIngresos(S) > 0)) { aviso('Cargá al menos un ingreso para seguir.'); return SIN_GUARDAR; }
       if (numeroDeDia(S.end) <= numeroDeDia(S.start)) { aviso('Revisá las fechas del mes.'); return SIN_GUARDAR; }
-      UI.paso = 2; dibujar(); scrollTo(0, 0); return SIN_GUARDAR;
     }
+    if (UI.paso < 5) { UI.paso += 1; dibujar(); scrollTo(0, 0); return SIN_GUARDAR; }
     S.bienvenida = true; UI.paso = 0; UI.pestana = 'hoy'; scrollTo(0, 0);
   },
   pasoAtras() { UI.paso = Math.max(0, UI.paso - 1); dibujar(); scrollTo(0, 0); return SIN_GUARDAR; },
@@ -1111,15 +1618,15 @@ const ACCIONES = {
       S.items.filter(i => i.n || i.a).map(i => [i.n, i.a, i.p ? 'Pagado' : 'Pendiente']))));
     return SIN_GUARDAR;
   },
-  copia() { descargar('mi-plata-copia.json', JSON.stringify(S)); return SIN_GUARDAR; },
-  async restaurar() {
-    try {
-      const datos = JSON.parse(valorDe('bk'));
-      if (!datos || !datos.items || !datos.spent) throw new Error('copia inválida');
-      if (!(await confirmar('Esto reemplaza los datos actuales. ¿Seguir?'))) return SIN_GUARDAR;
-      S = migrarEstado(datos);
-    } catch (_) { aviso('El texto de la copia no es válido.'); return SIN_GUARDAR; }
+  async guardarNube() {
+    const guardada = await descargar('mi-plata-copia.json', JSON.stringify(S));
+    if (!guardada) return SIN_GUARDAR;
+    S.ultimaCopia = Date.now(); S.posponerCopia = 0;       // el archivo se hizo antes de anotar la fecha
+    aviso('Copia guardada.');
   },
+  posponerCopia() { S.posponerCopia = Date.now() + 3 * MS_DIA; },
+  recuperarNube() { const selector = document.getElementById('fi'); if (selector && selector.click) selector.click(); return SIN_GUARDAR; },
+  async restaurar() { await restaurarDesdeTexto(valorDe('bk')); return SIN_GUARDAR; },
   async borrarTodo() {
     if (!(await confirmar('¿Borrar todos los datos?'))) return SIN_GUARDAR;
     S = estadoInicial(hoyISO());
@@ -1141,6 +1648,7 @@ const ACCIONES = {
 /* Campos que se editan escribiendo: nombre del campo -> qué cambia */
 const CAMBIOS = {
   nombre:        v => { S.nombre = v.trim(); },
+  diasCopia:     v => { S.diasCopia = Math.max(0, Math.round(aNumero(v))); },
   previo:        v => { S.previo = aNumero(v); },
   aviso:         v => { S.aviso = Math.min(100, Math.max(0, aNumero(v))); },
   inicio:        v => { if (v) S.start = v; },
@@ -1192,11 +1700,11 @@ function alertaDeLimite() {
 function alHacerCambio(e) {
   const el = e.target;
   if (el.id === 'ph') { if (el.files[0]) leerTicket(el.files[0]); return; }
-  if (el.id === 'fi') {
+  if (el.id === 'fi') {                       // se eligió un archivo de copia (por ejemplo desde Drive)
     const archivo = el.files[0];
     if (archivo) {
       const lector = new FileReader();
-      lector.onload = () => { document.getElementById('bk').value = lector.result; aviso('Archivo leído. Tocá Restaurar copia.'); };
+      lector.onload = () => { restaurarDesdeTexto(lector.result); el.value = ''; };
       lector.readAsText(archivo);
     }
     return;
