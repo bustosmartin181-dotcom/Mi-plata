@@ -390,9 +390,57 @@ body.pv #m, body.pv nav { filter: blur(16px); }
 .copyright::before {
   content: '';
 }
+.importar { width: 100%; max-width: 340px; margin-top: 18px; padding: 14px; border-radius: var(--radius); background: var(--ac-soft); border: 1.5px dashed var(--ac); text-align: left; }
+.importar-fila { display: flex; align-items: center; gap: 12px; }
+.importar-icono { flex: none; width: 42px; height: 42px; border-radius: 12px; background: var(--card); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.importar-txt { display: flex; flex-direction: column; font-size: .92rem; line-height: 1.3; }
+.importar-txt span { color: var(--mut); }
+.progreso { display: flex; align-items: center; justify-content: space-between; margin: 4px 2px 14px; }
+.puntos { display: flex; gap: 6px; }
+.puntos span { width: 26px; height: 6px; border-radius: 999px; background: var(--bd); }
+.puntos .hecho { background: var(--ac); opacity: .5; }
+.puntos .actual { background: var(--ac); }
+
+/* ===== Barra flotante de vidrio y botón "＋" (inspirado en el estilo de One UI 8.5) ===== */
+:root { --glass: rgba(255, 255, 255, 0.74); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --glass: rgba(26, 33, 29, 0.74); } }
+:root[data-theme="dark"] { --glass: rgba(26, 33, 29, 0.74); }
+:root[data-theme="light"] { --glass: rgba(255, 255, 255, 0.74); }
+nav {
+  left: 12px; right: 12px; margin: 0 auto;
+  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  max-width: 416px;
+  padding: 6px; gap: 2px;
+  border: 1px solid rgba(229, 223, 214, 0.7);
+  border-radius: 32px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: 0 10px 30px rgba(26, 31, 28, 0.16);
+}
+nav button { border-radius: 26px; padding: 10px 2px 8px; }
+nav button.on { background: var(--ac-soft); color: var(--ac); }
+.fab {
+  position: fixed; right: 18px; bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  width: 58px; height: 58px; padding: 0; border: 0; border-radius: 50%;
+  background: var(--ac); color: var(--acx);
+  font-size: 32px; line-height: 1; font-weight: 400;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.24);
+  z-index: 11;
+}
+main { padding-bottom: 150px; }
+.toast { bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
+body::after {
+  content: ''; position: fixed; left: 0; right: 0; bottom: 0; height: 120px;
+  background: linear-gradient(to top, var(--bg) 25%, transparent);
+  pointer-events: none; z-index: 5;
+}
+body.sin-degradado::after { display: none; }
 </style></head><body>
 <main id="m"></main>
 <nav><button data-t="plan">Plan</button><button data-t="hoy">Hoy</button><button data-t="dias">Días</button><button data-t="ajustes">Ajustes</button></nav>
+<button id="fab" class="fab" aria-label="Anotar gasto" style="display:none">＋</button>
 <script>
 const CONFIG = {"nube": false, "claude": false, "sw": false, "apk": true};
 /* =====================================================================
@@ -663,7 +711,7 @@ function fraseDeEstado(c, clase) {
    Misma clave de siempre, así que los datos de versiones anteriores
    siguen funcionando sin migrar nada.
    ===================================================================== */
-const VERSION = '9.3';
+const VERSION = '9.6';
 const AUTOR = 'Martín Enrique Bustos';
 const AUTOR_EMAIL = 'bustosmartin181@gmail.com';
 const AUTOR_WA = '5492612168515';
@@ -696,6 +744,7 @@ const nombreUsuario = () => S.nombre === undefined ? '' : S.nombre;
 const UI = {
   pestana: 'hoy',
   paso: 0,               // introducción: 0 bienvenida, 1 cómo funciona, 2 confianza, 3 ingresos, 4 gastos, 5 listo
+  verTodos: false,       // en Hoy: ¿se ven todos los gastos o solo los últimos 5?
   categoria: '',         // categoría elegida para el gasto que se está anotando
   editando: null,        // id del gasto que se está editando
   borrador: {},          // monto y detalle que llegan por voz o foto
@@ -1066,14 +1115,15 @@ function pantallaHoy(c) {
       `<div class="mut">${fraseDeEstado(c, clase)}</div><div class="mut" style="margin-top:4px;font-style:italic">“${fraseDelDia(hoy)}”</div>` +
       `<button class="sec" data-a="resumen" style="margin-top:8px;padding:8px 12px">Compartir resumen</button></div>`,
     S.sueldo ? '' : '<div class="card mut">Primero cargá tu sueldo en Ajustes y revisá tus gastos importantes.</div>',
-    tarjetaAvisoCopia(),
+    /* orden pensado para el uso diario: primero lo que se mira y lo que se hace todos los días */
     tarjetaQuedaHoy(c, clase, mensaje, presupuesto, porcentaje),
+    tarjetaAnotarGasto(editado, hoy),
+    tarjetaGastosAnotados(),
     tarjetaRacha(),
+    tarjetaAvisoCopia(),
     tarjetaSaldo(c),
     tarjetaCuentas(c),
-    tarjetaAnotarGasto(editado, hoy),
     tarjetaRecalibrar(c),
-    tarjetaGastosAnotados(),
   ].join('');
 }
 
@@ -1152,10 +1202,11 @@ function tarjetaAnotarGasto(editado, hoy) {
     '<div class="f"><button class="sec" data-a="dictar">🎤 Dictar</button>' +
     (CONFIG.claude ? '<label class="bt">📷 Foto de ticket<input id="ph" type="file" accept="image/*" capture="environment" hidden></label>' : '') + '</div>';
   return `<div class="card"><h2>${editado ? 'Editar gasto' : 'Anotar gasto'}</h2>` +
-    `<div class="f"><input id="am" inputmode="decimal" placeholder="Monto" value="${escapar(monto)}"><input id="nt" placeholder="Detalle (opcional)" value="${escapar(detalle)}"></div>` +
+    `<div class="f"><input id="am" inputmode="decimal" placeholder="Monto" value="${escapar(monto)}"><input id="nt" placeholder="Detalle" value="${escapar(detalle)}"></div>` +
     categorias + atajos +
-    `<div class="f"><input id="dt" type="date" value="${fecha}"><button data-a="anotar">${editado ? 'Guardar cambios' : 'Anotar gasto'}</button>` +
-    (editado ? '<button class="sec" data-a="cancelarEdicion">Cancelar</button>' : '') + '</div></div>';
+    `<div class="f"><input id="dt" type="date" value="${fecha}"></div>` +
+    `<button data-a="anotar" style="width:100%">${editado ? 'Guardar cambios' : 'Anotar gasto'}</button>` +
+    (editado ? '<button class="sec" data-a="cancelarEdicion" style="width:100%;margin-top:8px">Cancelar</button>' : '') + '</div>';
 }
 
 function tarjetaRecalibrar(c) {
@@ -1165,11 +1216,12 @@ function tarjetaRecalibrar(c) {
 }
 
 function tarjetaGastosAnotados() {
-  const lista = [...S.spent].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id).slice(0, 60);
-  return '<div class="card"><h2>Gastos anotados</h2>' + (lista.length
-    ? lista.map(e => `<div class="row"><span>${diaYMes(e.date)} ${emojiCategoria(e.cat)}${escapar(e.note || e.cat || '')}</span><span><b>${pesos(e.amt)}</b>` +
-        `<button class="x" data-a="editar" data-i="${e.id}">✎</button><button class="x" data-a="borrar" data-i="${e.id}">✕</button></span></div>`).join('')
-    : '<div class="mut">Todavía no anotaste gastos.</div>') + '</div>';
+  const todos = [...S.spent].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  const lista = UI.verTodos ? todos.slice(0, 60) : todos.slice(0, 5);     // en Hoy se ven los últimos 5
+  const fila = e => `<div class="row"><span>${diaYMes(e.date)} ${emojiCategoria(e.cat)}${escapar(e.note || e.cat || '')}</span><span><b>${pesos(e.amt)}</b>` +
+    `<button class="x" data-a="editar" data-i="${e.id}">✎</button><button class="x" data-a="borrar" data-i="${e.id}">✕</button></span></div>`;
+  return '<div class="card"><h2>Gastos anotados</h2>' + (lista.length ? lista.map(fila).join('') : '<div class="mut">Todavía no anotaste gastos.</div>') +
+    (todos.length > 5 ? `<button class="sec" data-a="verTodos" style="width:100%;margin-top:10px">${UI.verTodos ? 'Ver solo los últimos 5' : 'Ver todos (' + todos.length + ')'}</button>` : '') + '</div>';
 }
 
 /* ------------------------------ DÍAS ------------------------------ */
@@ -1257,7 +1309,14 @@ function tarjetaCuotas() {
 }
 
 /* ------------------------------ INTRODUCCIÓN (primera vez) ------------------------------ */
-function pantallaBienvenida() {
+/* Barra de avance de la introducción: 6 pantallas (la bienvenida es la primera) */
+function progresoIntro(n) {
+  const puntos = [0, 1, 2, 3, 4, 5].map(i => `<span class="${i < n ? 'hecho' : i === n ? 'actual' : ''}"></span>`).join('');
+  return `<div class="progreso"><div class="puntos">${puntos}</div><div class="mut">Paso ${n + 1} de 6</div></div>`;
+}
+function pantallaBienvenida() { return (UI.paso >= 1 ? progresoIntro(UI.paso) : '') + contenidoBienvenida(); }
+
+function contenidoBienvenida() {
   const c = calcular(S, hoyISO()), nombre = nombreUsuario(), paso = UI.paso;
   const pie = (conAtras, texto) => '<div class="pie">' + (conAtras ? '<button class="sec" data-a="pasoAtras">← Atrás</button>' : '<span></span>') +
     `<button data-a="pasoSiguiente">${texto}</button></div>`;
@@ -1268,6 +1327,9 @@ function pantallaBienvenida() {
     return `<div class="hero"><div class="moneda">💰</div><div class="serif hero-t">Bienvenido${nombre ? ',<br>' + escapar(nombre) : ''}</div>` +
       '<div class="serif hero-s">a Mi plata</div><p class="hero-p">Ordená tu plata, un día a la vez.</p>' +
       `<input data-f="nombre" value="${escapar(nombre)}" placeholder="¿Cómo te llamás? (opcional)" style="max-width:320px;text-align:center">` +
+      '<div class="importar"><div class="importar-fila"><span class="importar-icono">📥</span><span class="importar-txt"><b>¿Ya usabas Mi plata?</b><span>Traé tus datos desde una copia de seguridad.</span></span></div>' +
+      '<button class="sec" data-a="recuperarNube" style="width:100%;margin-top:12px;background:var(--card)">Importar copia de seguridad</button>' +
+      '<input id="fi" type="file" accept=".json,.txt,application/json,text/plain" style="display:none"></div>' +
       pieCopyright() + '</div>' + pie(false, 'Comenzar →');
 
   /* 1 · Cómo funciona, con un ejemplo con números */
@@ -1295,14 +1357,14 @@ function pantallaBienvenida() {
 
   /* 3 · Hoja en blanco para los ingresos */
   if (paso === 3)
-    return titulo('¿De dónde viene tu plata?', 'Elegí la categoría de cada ingreso y escribí cuánto es. Paso 1 de 2.') + tarjetaIngresos(true) +
+    return titulo('¿De dónde viene tu plata?', 'Elegí la categoría de cada ingreso y escribí cuánto es.') + tarjetaIngresos(true) +
       `<div class="card"><h2>📅 ¿Cuándo cobrás?</h2><label style="margin-top:0">Día que cobrás (inicio del mes)</label><input type="date" data-f="inicio" value="${S.start}">` +
       `<label>Próximo cobro (fin)</label><input type="date" data-f="fin" value="${S.end}"></div>` +
       pieCopyright() + pie(true, 'Siguiente →');
 
   /* 4 · Gastos importantes */
   if (paso === 4)
-    return titulo('Tus gastos importantes', 'Lo primero que pagás al cobrar: alquiler, servicios, tarjetas, cuotas. Paso 2 de 2.') +
+    return titulo('Tus gastos importantes', 'Lo primero que pagás al cobrar: alquiler, servicios, tarjetas, cuotas.') +
       tarjetaGastosImportantes() + tarjetaCuotas() +
       `<div class="card"><label style="margin-top:0">Saldo previo en cuenta (opcional)</label><input data-f="previo" inputmode="decimal" value="${S.previo || ''}" placeholder="Lo que te quedó del mes anterior"></div>` +
       '<div class="card"><h2>Así queda tu mes</h2>' + filaDoble('Ingresos', pesos(totalIngresos(S))) + filaDoble('Gastos importantes', pesos(c.total)) +
@@ -1461,10 +1523,12 @@ function ventanaResumen() {
 /* ------------------------------ DIBUJAR ------------------------------ */
 function dibujar() {
   aplicarTema();
-  const nav = document.querySelector('nav'), principal = document.getElementById('m');
-  if (bloqueada) { nav.style.display = 'none'; principal.innerHTML = pantallaBloqueo(); return; }
-  if (!S.bienvenida) { nav.style.display = 'none'; principal.innerHTML = pantallaBienvenida(); return; }
-  nav.style.display = '';
+  const nav = document.querySelector('nav'), principal = document.getElementById('m'), fab = document.getElementById('fab');
+  /* el degradado de abajo es solo para la app; en la introducción y el bloqueo taparía el botón */
+  if (bloqueada || !S.bienvenida) document.body.classList.add('sin-degradado'); else document.body.classList.remove('sin-degradado');
+  if (bloqueada) { nav.style.display = 'none'; fab.style.display = 'none'; principal.innerHTML = pantallaBloqueo(); return; }
+  if (!S.bienvenida) { nav.style.display = 'none'; fab.style.display = 'none'; principal.innerHTML = pantallaBienvenida(); return; }
+  nav.style.display = ''; fab.style.display = UI.pestana === 'hoy' ? 'none' : '';
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === UI.pestana));
   const pantallas = { plan: pantallaPlan, hoy: pantallaHoy, dias: pantallaDias, claude: pantallaClaude, ajustes: pantallaAjustes };
   principal.innerHTML = (pantallas[UI.pestana] || pantallaHoy)(calcular(S, hoyISO())) +
@@ -1524,6 +1588,7 @@ const ACCIONES = {
     S.spent = S.spent.filter(x => x.id != el.dataset.i);
   },
   dictar() { dictarGasto(); return SIN_GUARDAR; },
+  verTodos() { UI.verTodos = !UI.verTodos; dibujar(); return SIN_GUARDAR; },
   resumen() { ventanaResumen(); return SIN_GUARDAR; },
   recalibrar() {
     const c = calcular(S, hoyISO());
@@ -1715,6 +1780,14 @@ function alHacerCambio(e) {
   guardar(); dibujar();
 }
 
+/* Botón flotante "＋": lleva a Hoy con el cursor en el monto, desde cualquier pantalla */
+function abrirAnotarGasto() {
+  UI.pestana = 'hoy'; UI.editando = null; UI.borrador = {}; UI.categoria = '';
+  dibujar(); scrollTo(0, 0);
+  const monto = document.getElementById('am');
+  if (monto && monto.focus) monto.focus();
+}
+
 /* =====================================================================
    10 · ARRANQUE — conecta todo y pone la app en marcha.
    ===================================================================== */
@@ -1734,6 +1807,7 @@ function iniciar() {
     const pestana = e.target.dataset.t;
     if (pestana) { UI.pestana = pestana; dibujar(); scrollTo(0, 0); }
   };
+  document.getElementById('fab').onclick = abrirAnotarGasto;
   principal.onclick = alHacerClic;
   principal.onchange = alHacerCambio;
   principal.onkeydown = e => { if (e.key === 'Enter' && e.target.id === 'pin') desbloquear(); };
