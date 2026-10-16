@@ -24,10 +24,19 @@ jobs:
       - run: npx cap add android
       - run: npx @capacitor/assets generate --android
       - run: npx cap sync android
+      - name: Permisos de notificaciones
+        run: |
+          F=android/app/src/main/AndroidManifest.xml
+          grep -q POST_NOTIFICATIONS $F || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n</manifest>#' $F
+          grep -q RECEIVE_BOOT_COMPLETED $F || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />\n</manifest>#' $F
       - name: Numerar la version
         run: |
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+      - name: Usar siempre la misma clave de firma
+        run: |
+          mkdir -p ~/.android
+          cp debug.keystore ~/.android/debug.keystore
       - name: Construir APK
         working-directory: android
         run: ./gradlew assembleDebug
