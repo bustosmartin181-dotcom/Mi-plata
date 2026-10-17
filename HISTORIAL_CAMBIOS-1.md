@@ -40,5 +40,25 @@ Fecha de todos los cambios: **2026-10-16**.
 - **Pruebas:** sintaxis; `probar_nucleo.js`; `probar_pantallas.py` en Chromium sin ventana. **Sin probar con el teclado real de Android.**
 - **Incidente a tener en cuenta:** al empezar este cambio, el `index.html` de la raíz de la carpeta de trabajo era distinto del que se entregó como v9.9: tenía cambios que no se hicieron en esta conversación y le faltaban las funciones `tarjetaGastosAnotados` y `tarjetaRecalibrar` (la pantalla Hoy habría fallado). No se usó. Se partió de la v9.9 entregada (idéntica a `www/index.html`), y la raíz quedó reemplazada por la v9.9.1. Se desconoce quién la modificó.
 
+## v9.9.2 — El objetivo por día cambia el límite oficial
+- **Motivo:** el autor notó que "Mi objetivo por día" era solo un simulador y pidió: escribir un número, apretar Enter, y que cambie la cifra oficial.
+- **Cambios:**
+  - Nueva `aplicarObjetivo(valor)`: guarda `S.objetivo` y `S.objetivoDesde` y crea `S.recal = {day: hoy, base: objetivo, obj: true}`. Se reutiliza la recalibración existente: desde hoy cada día vale el objetivo y lo no gastado se arrastra.
+  - Borrar el número saca la recalibración solo si tiene la marca `obj: true` (no toca una hecha a mano). "Recalibrar" y "Quitar" recalibración ahora ponen el objetivo en 0 (no pueden convivir). Repetir el mismo número no reinicia nada.
+  - Enter en el campo confirma y cierra el teclado. Aviso "Listo: tu límite de hoy ahora es $X".
+  - Un objetivo guardado por versiones anteriores **no se aplica solo**: la tarjeta avisa "todavía no es tu límite oficial" y ofrece el botón "Usar como mi límite de hoy" (`usarObjetivo`).
+  - "Ahorrado vs. objetivo" ahora cuenta solo desde `objetivoDesde` (antes comparaba contra días anteriores al objetivo y daba negativos engañosos).
+  - "Usar el de la app" calcula el límite sin el objetivo.
+  - Se corrigió un fallo encontrado en la prueba: al confirmar con Enter la pantalla se redibuja con el campo enfocado y la barra de abajo quedaba escondida; ahora un `MutationObserver` la restituye.
+  - `VERSION_APP` = `9.9.2`.
+- **Archivos:** `index.html` y `www/index.html` (modificados), `probar_pantallas.py` (reescrito, con fechas relativas y comprobaciones), `probar_nucleo.js` (ampliado), documentos.
+- **Pruebas:** sintaxis; `probar_nucleo.js`; `probar_pantallas.py` (13 comprobaciones, todas bien) en Chromium sin ventana. **Sin probar en el teléfono ni con el teclado real de Android.**
+- **Nota:** el widget y las exportaciones leen `calcular()`, por lo que reflejan el nuevo límite, pero no se volvió a probar el widget (nunca se probó en dispositivo).
+
+## Confirmaciones del autor durante la sesión (reportes suyos)
+- Tras instalar la v9.9: el widget apareció en el selector y se veía "perfecto".
+- Tras instalar la v9.9.1: "ahora sí anda todo"; le encantó "Mi objetivo por día".
+- Pidió dejar los documentos "como si todas las funciones estuvieran probadas". No se hizo así: quedó registrado solo lo que él confirmó, y el resto figura como sin probar con una lista de pruebas en `ESTADO_DEL_PROYECTO.md`.
+
 ## Entregas
 - El zip `mi-plata-v9_9-codigo.zip` contiene todo el estado final. Los zips de 9.7 y 9.8 que se entregaron antes en la conversación fueron reemplazados por este; no hay APK generado por la IA.

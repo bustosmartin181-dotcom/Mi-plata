@@ -703,8 +703,10 @@ function objetivoDiario(S, hoy) {
   const c = calcular(S, hoy), dias = diasDelPeriodo(S, hoy);
   const disponibleHoy = c.saldo + c.gastoHoy;
   const proyectadoCon = o => disponibleHoy - o * c.faltan;
+  /* "Ahorrado" cuenta solo desde el día en que se puso el objetivo (S.objetivoDesde); si no hay fecha, desde hoy */
+  const desdeIdx = S.objetivoDesde ? Math.min(c.hoyIdx, Math.max(0, numeroDeDia(S.objetivoDesde) - numeroDeDia(S.start))) : c.hoyIdx;
   let ahorradoAntes = 0;
-  for (let i = 0; i < c.hoyIdx; i++) ahorradoAntes += obj - dias[i].gasto;
+  for (let i = desdeIdx; i < c.hoyIdx; i++) ahorradoAntes += obj - dias[i].gasto;
   const paso = Math.max(500, Math.round(obj * 0.1 / 500) * 500);
   const escenarios = [-2, -1, 0, 1].map(k => obj + k * paso).filter(o => o > 0)
     .map(o => ({ o, sobra: proyectadoCon(o), actual: o === obj }));
@@ -713,7 +715,7 @@ function objetivoDiario(S, hoy) {
     promedio: disponibleHoy / c.faltan,
     proyectado: proyectadoCon(obj),
     ahorroHoy: obj - c.gastoHoy,
-    ahorradoAntes, escenarios,
+    ahorradoAntes, diasPrevios: c.hoyIdx - desdeIdx, escenarios,
   };
 }
 
@@ -736,7 +738,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.1';
+const VERSION_APP = '9.9.2';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1410,8 +1412,9 @@ function tarjetaObjetivo(c) {
     '<button class="sec" data-a="usarBase">Usar el de la app</button></div>';
   let cuerpo;
   if (!o) {
-    cuerpo = '<div class="mut" style="margin-bottom:8px">Poné cuánta plata querés gastar por día y te digo cuánto te sobra para ahorrar.</div>' + campo;
+    cuerpo = '<div class="mut" style="margin-bottom:8px">Escribí cuánta plata querés gastar por día y apretá Enter: ese pasa a ser tu límite de cada día (el de "Te queda para hoy") y te digo cuánto te sobra para ahorrar.</div>' + campo;
   } else {
+    const aplicado = !!(S.recal && S.recal.obj && S.recal.base === S.objetivo);
     const alcanza = o.proyectado >= 0;
     const mensaje = alcanza
       ? `Si gastás <b>${dinero(o.obj)}</b> por día, al final del período te sobran <b class="num-ok">${dinero(o.proyectado)}</b> para ahorrar.`
@@ -1419,14 +1422,16 @@ function tarjetaObjetivo(c) {
     const hoyTxt = o.ahorroHoy >= 0
       ? `Hoy vas <b>${dinero(o.ahorroHoy)}</b> por debajo de tu objetivo.`
       : `Hoy te pasaste <b class="neg">${dinero(-o.ahorroHoy)}</b> de tu objetivo.`;
-    const antes = c.hoyIdx > 0
+    const antes = o.diasPrevios > 0
       ? filaDoble('Ahorrado vs. objetivo (días anteriores)', `<span class="${o.ahorradoAntes < 0 ? 'neg' : ''}">${dinero(o.ahorradoAntes)}</span>`) : '';
     const filas = o.escenarios.map(x =>
       `<div class="row"><span>${x.actual ? '👉 ' : ''}Gastando ${dinero(x.o)} por día</span><b class="${x.sobra < 0 ? 'neg' : ''}">${x.sobra < 0 ? 'faltan ' + dinero(-x.sobra) : 'sobran ' + dinero(x.sobra)}</b></div>`).join('');
-    cuerpo = campo + `<div style="margin:10px 0">${mensaje}</div><div class="mut" style="margin-bottom:6px">${hoyTxt}</div>` +
+    const sinAplicar = aplicado ? '' : '<div class="mut" style="margin:10px 0 0">Este número todavía <b>no</b> es tu límite oficial de hoy.</div>' +
+      '<div class="f" style="margin-top:8px"><button data-a="usarObjetivo">Usar como mi límite de hoy</button></div>';
+    cuerpo = campo + sinAplicar + `<div style="margin:10px 0">${mensaje}</div><div class="mut" style="margin-bottom:6px">${hoyTxt}</div>` +
       filaDoble('Máximo parejo por día', dinero(o.promedio)) + filaDoble(`Días que faltan (con hoy)`, o.faltan) + antes +
       '<div class="mut" style="margin:10px 0 4px">Probá distintos gastos por día:</div>' + filas +
-      '<div class="mut" style="font-size:13px;margin-top:8px">Lo que te sobre lo podés juntar en una meta (pestaña Plan). Para dejar de usar el objetivo, borrá el número.</div>';
+      '<div class="mut" style="font-size:13px;margin-top:8px">' + (aplicado ? 'Este objetivo es ahora tu límite diario oficial. Para volver a tu límite normal, borrá el número y apretá Enter. ' : '') + 'Lo que te sobre lo podés juntar en una meta (pestaña Plan).</div>';
   }
   return '<div class="card"><h2>🎯 Mi objetivo por día</h2>' + cuerpo + '</div>';
 }
@@ -1910,9 +1915,10 @@ const ACCIONES = {
   resumen() { ventanaResumen(); return SIN_GUARDAR; },
   recalibrar() {
     const c = calcular(S, hoyISO());
+    S.objetivo = 0; S.objetivoDesde = '';                         // no pueden convivir con el objetivo
     S.recal = { day: c.hoyIdx, base: (c.disp - c.gastadoAntesDeHoy) / c.faltan };
   },
-  quitarRecalibracion() { S.recal = null; },
+  quitarRecalibracion() { S.recal = null; S.objetivo = 0; S.objetivoDesde = ''; },
 
   /* --- gastos importantes --- */
   agregarGasto() {      // un gasto nuevo con el período empezado se descuenta desde mañana
@@ -2037,7 +2043,12 @@ const ACCIONES = {
   sincronizar() { traerDeNube(); return SIN_GUARDAR; },
 
   /* --- apariencia, PIN y Claude --- */
-  usarBase() { S.objetivo = Math.max(0, Math.round(calcular(S, hoyISO()).baseHoy)); },
+  usarObjetivo() { aplicarObjetivo(S.objetivo); aviso('Listo: tu límite de hoy ahora es ' + pesos(S.objetivo) + '.'); },
+  usarBase() {      // el límite que daría la app sin el objetivo
+    const sinObjetivo = Object.assign({}, S, { recal: (S.recal && S.recal.obj) ? null : S.recal });
+    aplicarObjetivo(calcular(sinObjetivo, hoyISO()).baseHoy);
+    aviso('Listo: tu límite de hoy es ' + pesos(S.objetivo) + '.');
+  },
   tema(el) { S.tema = el.dataset.v; },
   color(el) { S.color = el.dataset.v; },
   mostrarOcultar() { mostrarOcultarDinero(); return SIN_GUARDAR; },
@@ -2052,7 +2063,11 @@ const ACCIONES = {
 /* Campos que se editan escribiendo: nombre del campo -> qué cambia */
 const CAMBIOS = {
   nombre:        v => { S.nombre = v.trim(); },
-  objetivo:      v => { S.objetivo = Math.max(0, aNumero(v)); },
+  objetivo:      v => {
+    const antes = S.objetivo || 0;
+    aplicarObjetivo(aNumero(v));
+    if ((S.objetivo || 0) !== antes) aviso(S.objetivo > 0 ? 'Listo: tu límite de hoy ahora es ' + pesos(S.objetivo) + '.' : 'Volviste a tu límite normal.');
+  },
   ocultar:       (v, el) => { S.ocultar = el.checked; UI.mostrarDinero = false; },
   recOn:         (v, el) => {
     S.recOn = el.checked;
@@ -2138,6 +2153,17 @@ function abrirAnotarGasto() {
   if (monto && monto.focus) monto.focus();
 }
 
+/* El objetivo pasa a ser el límite diario oficial desde hoy. Se apoya en la recalibración (S.recal):
+   desde hoy cada día vale `base` = objetivo, y lo que no se gaste se arrastra al día siguiente.
+   La marca `obj: true` permite sacarla al borrar el objetivo sin tocar una recalibración hecha a mano. */
+function aplicarObjetivo(valor) {
+  const n = Math.max(0, Math.round(+valor || 0)), hoy = hoyISO(), c = calcular(S, hoy);
+  if (n > 0 && n === S.objetivo && S.recal && S.recal.obj) return;          // mismo número: no se reinicia nada
+  S.objetivo = n;
+  if (n > 0) { S.objetivoDesde = hoy; S.recal = { day: c.hoyIdx, base: n, obj: true }; }
+  else { S.objetivoDesde = ''; if (S.recal && S.recal.obj) S.recal = null; }
+}
+
 /* Con el teclado abierto: se esconde la barra de abajo y, si se escribe en "Anotar gasto", la tarjeta
    entera se lleva a la vista (monto, detalle, categorías, fecha y botón azul juntos, sobre el teclado). */
 (function () {
@@ -2156,6 +2182,10 @@ function abrirAnotarGasto() {
     clearTimeout(temporizador);
     temporizador = setTimeout(() => { if (!esCampo(document.activeElement)) document.body.classList.remove('teclado'); }, 300);
   });
+  /* Si la pantalla se vuelve a dibujar con un campo enfocado (por ejemplo al confirmar un número con Enter),
+     el campo desaparece sin avisar: se revisa después de cada dibujo para que la barra de abajo no quede escondida. */
+  new MutationObserver(() => { if (!esCampo(document.activeElement)) document.body.classList.remove('teclado'); })
+    .observe(document.getElementById('m'), { childList: true });
 })();
 
 /* Lo llama la app de Android cuando se toca el "+" del widget (se ignora si ya se atendió ese pedido) */
@@ -2186,7 +2216,10 @@ function iniciar() {
   document.getElementById('fab').onclick = abrirAnotarGasto;
   principal.onclick = alHacerClic;
   principal.onchange = alHacerCambio;
-  principal.onkeydown = e => { if (e.key === 'Enter' && e.target.id === 'pin') desbloquear(); };
+  principal.onkeydown = e => {
+    if (e.key === 'Enter' && e.target.id === 'pin') desbloquear();
+    if (e.key === 'Enter' && e.target.dataset && e.target.dataset.f === 'objetivo') e.target.blur();   // confirma el objetivo
+  };
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => dibujar());
   ['click', 'touchstart', 'keydown'].forEach(ev => document.addEventListener(ev, reiniciarInactividad, { passive: true }));
   document.addEventListener('visibilitychange', alCambiarVisibilidad);

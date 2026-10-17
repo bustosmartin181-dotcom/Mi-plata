@@ -1,6 +1,6 @@
 # Mi plata
 
-App de Android para administrar la plata día a día. Creada por Martín Enrique Bustos (ver `AUTOR.txt` en el repositorio de GitHub). Versión interna de la app web: **9.9.1** (`VERSION_APP` en `index.html`).
+App de Android para administrar la plata día a día. Creada por Martín Enrique Bustos (ver `AUTOR.txt` en el repositorio de GitHub). Versión interna de la app web: **9.9.2** (`VERSION_APP` en `index.html`).
 
 > Todo lo que dice este documento sale de los archivos reales del proyecto. Lo que no se pudo comprobar está marcado como **(sin comprobar)**. Estado y pruebas: ver `ESTADO_DEL_PROYECTO.md`.
 
@@ -15,13 +15,13 @@ Comprobado leyendo `index.html` (sin probar todas en un teléfono real; ver el e
 - **Plan:** ingresos por categoría, gastos importantes (con cuotas y estado pagado/pendiente), saldo previo, período con fecha de inicio y fin, metas de ahorro con aportes y cuentas (saldos reales con ajuste).
 - **Hoy:** "Te queda para hoy" con semáforo (verde / naranja / rojo), cuánto tendrás mañana, y **justo debajo la tarjeta "Anotar gasto"** (con categorías; con el teclado abierto se ve entera, botón azul incluido), lista de gastos (últimos 5, con "Ver todos"), racha de días en verde.
 - **Días:** la tarjeta "🎯 Mi objetivo por día" y la vista día por día del período.
-- **🎯 Mi objetivo por día (v9.7, en la pestaña Días desde v9.9.1):** se elige cuánto gastar por día y se ve cuánto sobra para ahorrar, con tabla de escenarios.
+- **🎯 Mi objetivo por día (v9.7; en la pestaña Días desde v9.9.1; límite oficial desde v9.9.2):** se escribe cuánto gastar por día y se aprieta Enter: desde hoy ese número **es** el límite de "Te queda para hoy" (lo que no se gasta pasa al día siguiente). Muestra cuánto sobra para ahorrar y una tabla de escenarios. Borrar el número + Enter vuelve al límite normal.
 - **Seguridad:** PIN, bloqueo por inactividad y opción de ocultar los montos con puntitos (desde v9.9 es opcional y viene apagada).
 - **Apariencia:** tema automático/claro/oscuro y paletas de color.
 - **Copias de seguridad:** exportar/recuperar datos en `.json` por el menú compartir, y "Guardar en el teléfono" (carpeta Documentos/MiPlata, v9.8).
 - **Exportar:** CSV (días y gastos importantes), **Excel (.xlsx)** y **PDF** hechos a mano en JavaScript, sin librerías (v9.8).
 - **🔔 Recordatorio diario (v9.8):** notificación local a la hora elegida.
-- **Widget de pantalla de inicio "Mi plata — Hoy" (v9.9):** muestra lo que queda hoy; botón + para anotar un gasto. **Nunca se compiló ni se probó en un teléfono.**
+- **Widget de pantalla de inicio "Mi plata — Hoy" (v9.9):** muestra lo que queda hoy; botón + para anotar un gasto. **Compiló e instaló en el teléfono del autor y apareció bien (reporte suyo); valores, botón + y actualización sin confirmar.**
 - Existen módulos de sincronización con una cuenta de Claude y de dictado/foto de ticket, pero están **apagados** en esta app (`CONFIG = {"nube": false, "claude": false, "sw": false, "apk": true}`).
 
 ## Cómo está hecha
@@ -61,7 +61,7 @@ El zip de respaldo `mi-plata-v9_9-codigo.zip` además incluye `www/index.html` (
 ## Cómo probar
 
 - **Cálculo y exportación (sin teléfono):** `node probar_nucleo.js` en la carpeta con `index.html`. Prueba el cálculo diario, el objetivo, y que se generen un `.xlsx` y un `.pdf` válidos en estructura.
-- **Pantallas:** `python3 probar_pantallas.py` (necesita Playwright con Chromium). Abre `index.html` en un navegador sin ventana y prueba el orden de las tarjetas, el teclado simulado y anotar un gasto. `CONFIG.apk` está en `true`, así que guardar en el teléfono, el recordatorio y el widget solo hacen algo dentro de la app instalada.
+- **Pantallas:** `python3 probar_pantallas.py` (necesita Playwright con Chromium). Abre `index.html` en un navegador sin ventana y prueba el orden de las tarjetas, el teclado simulado, anotar un gasto y el objetivo como límite oficial. `CONFIG.apk` está en `true`, así que guardar en el teléfono, el recordatorio y el widget solo hacen algo dentro de la app instalada.
 - **Android:** instalar el APK que genera GitHub Actions.
 
 ## Cómo generar el APK (todo desde el teléfono es posible)

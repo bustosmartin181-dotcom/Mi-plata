@@ -1,6 +1,6 @@
 # Estado del proyecto — fin de la sesión del 2026-10-16
 
-Versión del código: **9.9.1** (`VERSION_APP` en `index.html`). Base: código extraído del APK **9.6** que subió el autor.
+Versión del código: **9.9.2** (`VERSION_APP` en `index.html`). Base: código extraído del APK **9.6** que subió el autor.
 
 ## Resumen honesto
 
@@ -12,9 +12,29 @@ Versión del código: **9.9.1** (`VERSION_APP` en `index.html`). Base: código e
 | Guardar en el teléfono (v9.8) | **Sin probar en ningún teléfono.** Depende de que Android permita escribir en Documentos. |
 | Recordatorio diario (v9.8) | **Sin probar.** Plugin y permisos agregados por el workflow; nunca se vio sonar una notificación. |
 | Números visibles por defecto (v9.9) | Cambio de 3 líneas; sintaxis comprobada; **sin probar en pantalla**. |
-| Reordenado de Hoy/Días y teclado (v9.9.1) | **Probado en un navegador real** (Chromium sin ventana, teclado simulado con la ventana achicada): orden de tarjetas, botón azul visible junto al monto, barra de abajo que se esconde y vuelve, y anotar un gasto. **No probado con el teclado real de Android.** |
-| Widget "Mi plata — Hoy" (v9.9) | **No terminado: nunca se compiló con Android real ni se instaló.** Ver abajo. |
+| Objetivo como límite oficial (v9.9.2) | **Probado en navegador real** (`probar_pantallas.py`, 13 comprobaciones) y en Node (`probar_nucleo.js`): escribir un número + Enter cambia "Te queda para hoy" y "Mañana tendrás"; borrarlo vuelve a lo normal; "Recalibrar" saca el objetivo. **No probado en el teléfono.** |
+| Reordenado de Hoy/Días y teclado (v9.9.1) | **Probado en un navegador real** (Chromium sin ventana, teclado simulado). **Además el autor, tras instalar esta versión, escribió "ahora sí anda todo"** (reporte suyo, general; no detalló punto por punto). |
+| Widget "Mi plata — Hoy" (v9.9) | **El autor informó que compiló, se instaló y que el widget apareció "perfecto" en su teléfono** (reporte suyo, no verificado por la IA). **Sin confirmar:** que muestre los valores correctos, el botón +, el modo oscuro y la actualización. Ver abajo. |
 | Ícono nuevo (v9.9) | Imágenes generadas y revisadas visualmente; **no se vio en un teléfono**. |
+
+## Confirmado por el autor en su teléfono (reportes del autor; la IA no pudo verificarlos)
+
+- **v9.9:** la compilación en GitHub Actions con el widget funcionó (se instaló un APK con el widget) y el widget apareció en el selector de widgets y se veía "perfecto". Esto también indica que `agregar_widget.py` y el Java del widget compilaron de verdad.
+- **v9.9.1:** "ahora sí anda todo": objetivo en Días, "Anotar gasto" debajo de "Te queda para hoy" y botón azul visible con el teclado. El autor dijo que le encantó "Mi objetivo por día".
+- **v9.9.2:** todavía sin reporte.
+- **Sin ningún reporte:** recordatorio diario, Excel, PDF, "Guardar en el teléfono", actualizar un APK sobre otro sin desinstalar, notificaciones, modo oscuro del widget.
+
+> Regla para quien continúe: **no marcar como probado lo que no figure acá o en las pruebas automáticas de arriba.** Cuando el autor confirme algo nuevo, agregarlo en esta sección con su versión.
+
+## Lista para que el autor pruebe y avise (marcar al confirmar)
+
+- [ ] Widget: el monto coincide con "Te queda para hoy"; cambia al anotar un gasto y salir de la app.
+- [ ] Widget: el botón **+** abre Hoy listo para escribir el monto (con la app cerrada y abierta).
+- [ ] Objetivo v9.9.2: escribir un número + Enter cambia "Te queda para hoy"; borrarlo vuelve al límite normal.
+- [ ] Ajustes → Exportar: Excel (.xlsx) se abre; PDF se abre.
+- [ ] Ajustes → "Guardar en el teléfono": aparece el archivo en Documentos/MiPlata.
+- [ ] Recordatorio diario: pide permiso y suena a la hora elegida.
+- [ ] Instalar una versión nueva sobre la anterior sin desinstalar (misma clave) y que los datos sigan.
 
 ## Qué funciona y fue probado (en esta sesión)
 
@@ -30,10 +50,10 @@ Ejecutado en el entorno de la sesión (sin Android ni red):
 
 ## Qué NO se probó
 
-- Ninguna compilación en GitHub Actions de las versiones 9.8 y 9.9 (se desconoce si pasan).
+- Compilación de la v9.9.2 en GitHub Actions (el autor aún no informó). Las compilaciones de 9.9 y 9.9.1 funcionaron según el autor.
 - Ninguna ejecución en un teléfono por parte de la IA. (Desde la v9.9.1 sí hay prueba en navegador de escritorio con `probar_pantallas.py`; el comportamiento real del teclado de Android puede diferir.)
 - Instalar el APK nuevo sobre uno viejo (actualización con la clave fija).
-- Widget: agregarlo a la pantalla de inicio, valores mostrados, botón +, modo oscuro, aviso de dato viejo, actualización al salir de la app, comportamiento con `updatePeriodMillis` (30 min).
+- Widget: el autor informó que apareció bien; falta confirmar valores mostrados, botón +, modo oscuro, aviso de dato viejo, actualización al salir de la app y comportamiento con `updatePeriodMillis` (30 min).
 - Notificación diaria, permiso de notificaciones en Android 13+.
 - Guardar en Documentos/MiPlata en distintas versiones de Android.
 - Compartir/guardar el Excel y el PDF desde la app.
@@ -45,14 +65,14 @@ Ejecutado en el entorno de la sesión (sin Android ni red):
 - El recordatorio suena todos los días aunque ya se hayan anotado gastos y puede atrasarse unos minutos.
 - El PDF es de texto simple (sin gráficos).
 - Se supone, sin haberlo verificado en el código del plugin, que `Directory.DATA` de Capacitor Filesystem en Android equivale a `context.getFilesDir()`, que es donde el widget busca `widget.json`. **(Sin comprobar.)**
-- Se supone que el proyecto que crea `npx cap add android` con Capacitor 6 no compila Kotlin, por eso el widget está en Java. **(Sin comprobar contra un proyecto real.)**
+- El widget está en Java por la suposición de que el proyecto de Capacitor 6 no compila Kotlin. Esa suposición sigue **sin comprobarse**, pero el Java compiló de verdad en GitHub (el widget se instaló).
 - Se supone que `MainActivity.java` generado por Capacitor es una clase vacía en el paquete `com.bustos.miplata`; `agregar_widget.py` la **reemplaza completa** y falla con error si no encuentra `MainActivity.java`.
 - Guardar en el teléfono puede fallar en Android 9 o anterior (falta el permiso de almacenamiento, que no se agregó al manifiesto) y se desconoce el comportamiento exacto en Android 11+.
 
 ## Qué falta para completar el widget y comprobar que funciona
 
-1. Subir los archivos y correr el workflow; si falla, leer el error del paso "Agregar el widget" o "Construir APK".
-2. Instalar el APK, mantener apretada la pantalla de inicio → Widgets → "Mi plata — Hoy".
+1. ~~Subir los archivos y correr el workflow~~ (hecho, según el autor).
+2. ~~Instalar el APK y agregar el widget~~ (hecho, apareció bien según el autor).
 3. Abrir la app, anotar un gasto, salir: el monto del widget debe cambiar.
 4. Tocar el botón **+** con la app cerrada y con la app abierta: debe abrir la pestaña Hoy con el cursor en "Monto".
 5. Probar con "Ocultar los montos" activado (debe mostrar puntitos) y con modo oscuro.

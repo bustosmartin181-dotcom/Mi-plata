@@ -23,9 +23,22 @@ assert.strictEqual(o.faltan, 15);
 assert.strictEqual(Math.round(o.proyectado), Math.round(o.disponibleHoy - 9000 * 15));
 S.objetivo = 0; assert.strictEqual(objetivoDiario(S, hoy), null);   // sin objetivo no hay tarjeta
 S.objetivo = 9000;
+// El objetivo como límite oficial se apoya en la recalibración: desde hoy cada día vale el objetivo
+S.recal = { day: c.hoyIdx, base: 10000, obj: true };
+const c2 = calcular(S, hoy);
+assert.strictEqual(c2.baseHoy, 10000);
+assert.strictEqual(c2.quedaHoy, 10000 - 5000);                          // objetivo - gastado hoy
+assert.strictEqual(c2.manana, 10000 + (10000 - 5000));                  // lo que no se gasta pasa a mañana
+S.recal = null;
+// "Ahorrado vs. objetivo" cuenta solo desde el día en que se puso el objetivo
+S.objetivoDesde = '2026-10-14';
+const o2 = objetivoDiario(S, hoy);
+assert.strictEqual(o2.diasPrevios, 2);
+assert.strictEqual(o2.ahorradoAntes, (9000 - 12000) + (9000 - 0));
+S.objetivoDesde = '';
 const d = datosExportar(S, hoy);
 const xlsx = xlsxExportar(d), pdf = pdfExportar(d);
 assert.strictEqual(String.fromCharCode(xlsx[0], xlsx[1]), 'PK');       // un .xlsx es un zip
 assert.strictEqual(String.fromCharCode(...pdf.slice(0, 5)), '%PDF-');
-console.log('Todas las pruebas del núcleo pasaron (cálculo, objetivo, xlsx, pdf).');
+console.log('Todas las pruebas del núcleo pasaron (cálculo, objetivo como límite, ahorrado, xlsx, pdf).');
 `);

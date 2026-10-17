@@ -17,14 +17,14 @@ Detalle: `README.md` (qué hace), `ARQUITECTURA.md` (cómo está hecha).
 
 ## 3. Estado actual (ver `ESTADO_DEL_PROYECTO.md`)
 
-- Versión del código: **9.9.1**.
+- Versión del código: **9.9.2**.
 - Hecho y probado en Node: cálculo, objetivo diario, generación de Excel y PDF.
-- **Sin compilar ni probar en dispositivo:** v9.8 y v9.9 completas; sobre todo el **widget**, el recordatorio, "Guardar en el teléfono" y la exportación desde Android.
-- El **primer paso lógico** es que el autor suba los archivos, corra el workflow y te cuente si compiló. Si falló, pedile las últimas líneas del error del paso que falló.
+- **El autor confirmó en su teléfono** (reportes suyos): la compilación con el widget, que el widget apareció bien, y que la v9.9.1 "anda todo". **Sin confirmar:** v9.9.2, valores y botón + del widget, recordatorio, "Guardar en el teléfono", Excel y PDF desde Android. La lista está en `ESTADO_DEL_PROYECTO.md`; no marques nada como probado sin que el autor lo confirme.
+- El **primer paso lógico** es pedirle al autor que complete la lista de pruebas de `ESTADO_DEL_PROYECTO.md` y te cuente qué falló. Si una compilación falla, pedile las últimas líneas del error del paso que falló.
 
 ## 4. Últimos cambios (ver `HISTORIAL_CAMBIOS.md`)
 
-v9.7 objetivo diario → v9.8 guardar en teléfono, Excel/PDF, recordatorio, clave fija → v9.9 números visibles por defecto, widget, ícono nuevo → v9.9.1 objetivo en Días, "Anotar gasto" siempre debajo de "Te queda para hoy" y visible junto al botón azul con el teclado abierto.
+v9.7 objetivo diario → v9.8 guardar en teléfono, Excel/PDF, recordatorio, clave fija → v9.9 números visibles por defecto, widget, ícono nuevo → v9.9.1 objetivo en Días, "Anotar gasto" siempre debajo de "Te queda para hoy" y visible junto al botón azul con el teclado abierto → v9.9.2 el objetivo por día pasa a ser el límite diario oficial (escribir número + Enter).
 
 ## 5. Problemas pendientes
 
@@ -59,7 +59,8 @@ No rehagas lo que ya está hecho y probado: núcleo de cálculo, objetivo diario
 11. **No afirmes que algo funciona si no lo probaste.** Distinguí "probado en Node", "compila contra stubs" y "probado en un teléfono".
 12. No borres archivos ni reemplaces versiones sin justificarlo. Dejá siempre el estado anterior descrito en el historial.
 13. **Antes de editar, compará la copia de trabajo con la última versión entregada** (`cmp`). Si difiere sin explicación, no la uses a ciegas: puede estar incompleta (ya pasó, ver `HISTORIAL_CAMBIOS.md`, v9.9.1).
-14. Orden fijo de la pantalla Hoy: "Te queda para hoy" → "Anotar gasto" → el resto. El objetivo diario vive en Días.
+14. El objetivo diario **es** una recalibración marcada (`S.recal.obj`). No lo trates como un campo suelto: usá `aplicarObjetivo()`.
+15. Orden fijo de la pantalla Hoy: "Te queda para hoy" → "Anotar gasto" → el resto. El objetivo diario vive en Días.
 
 ## 8. Al terminar cada trabajo, informá siempre
 

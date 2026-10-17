@@ -44,8 +44,11 @@ Módulos en este orden (están rotulados con comentarios `NN · NOMBRE`):
 | 09 · ACCIONES | Objeto de acciones (`data-a="..."`) y de cambios de campos (`data-f="..."`), con el despachador que aplica el PIN. |
 | 10 · ARRANQUE | Pone la app en marcha: carga, dibuja, engancha eventos, `window.miplataAbrir`. |
 
+#### El objetivo como límite oficial (v9.9.2)
+No hay un cálculo nuevo: `aplicarObjetivo()` escribe `S.recal = {day, base, obj: true}` y `calcular()` ya sabía usar `recal` (desde `recal.day` cada día vale `recal.base`, el arrastre arranca en 0). Campos nuevos del estado: `objetivo` (número), `objetivoDesde` (fecha ISO), y la marca `obj` dentro de `recal`. `recalibrar()` y `quitarRecalibracion()` ponen `objetivo = 0` para que no se contradigan. `objetivoDiario()` (solo lectura) calcula el resumen de la tarjeta.
+
 #### Teclado y "Anotar gasto" (v9.9.1)
-Un par de escuchas globales (`focusin`/`focusout`, justo antes de `window.miplataAbrir`) agregan la clase `teclado` al `body` mientras hay un campo enfocado: el CSS `body.teclado nav, .fab, ::after {display:none}` libera espacio. Si el campo está dentro de `#tarjeta-anotar`, la tarjeta se lleva a la vista con `scrollIntoView({block:'end'})`. Esto supone que el WebView de Android **achica la ventana** al salir el teclado (se vio así en una captura del autor); no se verificó en todos los teléfonos. El botón ＋ (`#fab`) solo se ve fuera de la pestaña Hoy y llama a `abrirAnotarGasto()`.
+Un par de escuchas globales (`focusin`/`focusout`, justo antes de `window.miplataAbrir`) agregan la clase `teclado` al `body` mientras hay un campo enfocado: el CSS `body.teclado nav, .fab, ::after {display:none}` libera espacio. Si el campo está dentro de `#tarjeta-anotar`, la tarjeta se lleva a la vista con `scrollIntoView({block:'end'})`. Un `MutationObserver` sobre `#m` quita la clase si, después de redibujar, ya no hay un campo enfocado (confirmar con Enter redibuja y el campo desaparece sin disparar `focusout`). Esto supone que el WebView de Android **achica la ventana** al salir el teclado (se vio así en una captura del autor); no se verificó en todos los teléfonos. El botón ＋ (`#fab`) solo se ve fuera de la pestaña Hoy y llama a `abrirAnotarGasto()`.
 
 ### 2. Cómo se comunican las partes (dentro de la web)
 
@@ -71,7 +74,7 @@ Un par de escuchas globales (`focusin`/`focusout`, justo antes de `window.miplat
 
 Se accede por `window.Capacitor.Plugins.<Nombre>`, solo si `CONFIG.apk`.
 
-### 5. El widget de Android (v9.9) — **sin probar en dispositivo**
+### 5. El widget de Android (v9.9) — **instalado y visible en el teléfono del autor (reporte suyo); funcionamiento detallado sin confirmar**
 
 Todo se instala al compilar con `agregar_widget.py` (que contiene los archivos como texto):
 
