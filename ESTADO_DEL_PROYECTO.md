@@ -1,6 +1,6 @@
-# Estado del proyecto — fin de la sesión del 2026-10-16
+# Estado del proyecto — actualización al 2026-10-17
 
-Versión del código: **9.9** (`VERSION_APP` en `index.html`). Base: código extraído del APK **9.6** que subió el autor.
+Versión del código: **9.9.2** (`VERSION_APP` en `index.html`). Base: código extraído del APK **9.6** que subió el autor.
 
 ## Resumen honesto
 
@@ -11,9 +11,41 @@ Versión del código: **9.9** (`VERSION_APP` en `index.html`). Base: código ext
 | Exportar Excel y PDF (v9.8) | Archivos de prueba generados y abiertos con openpyxl y LibreOffice (xlsx), qpdf y pdftotext (pdf). **No se probó en Android** (guardado + menú compartir). |
 | Guardar en el teléfono (v9.8) | **Sin probar en ningún teléfono.** Depende de que Android permita escribir en Documentos. |
 | Recordatorio diario (v9.8) | **Sin probar.** Plugin y permisos agregados por el workflow; nunca se vio sonar una notificación. |
+| Copia en Drive/nube y restauración (v9.8) | El autor informó que exportó la copia a Drive y la restauró desde la nube al reinstalar. |
 | Números visibles por defecto (v9.9) | Cambio de 3 líneas; sintaxis comprobada; **sin probar en pantalla**. |
-| Widget "Mi plata — Hoy" (v9.9) | **No terminado: nunca se compiló con Android real ni se instaló.** Ver abajo. |
+| Objetivo como límite oficial (v9.9.2) | Probado en navegador real y Node; el autor informó que la modificación funciona perfectamente en su teléfono. |
+| Reordenado de Hoy/Días y teclado (v9.9.1) | **Probado en un navegador real** (Chromium sin ventana, teclado simulado). **Además el autor, tras instalar esta versión, escribió "ahora sí anda todo"** (reporte suyo, general; no detalló punto por punto). |
+| Widget "Mi plata — Hoy" (v9.9) | El autor informó que lo instaló, lo probó en su teléfono y funciona perfecto. No detalló cada caso de prueba por separado. |
 | Ícono nuevo (v9.9) | Imágenes generadas y revisadas visualmente; **no se vio en un teléfono**. |
+
+## Confirmado por el autor en su teléfono (reportes del autor; la IA no pudo verificarlos)
+
+- **v9.9:** la compilación en GitHub Actions con el widget funcionó; el widget apareció en el selector y se veía "perfecto".
+- **v9.9.1:** "ahora sí anda todo": objetivo en Días, "Anotar gasto" debajo de "Te queda para hoy" y botón azul visible con el teclado. El autor dijo que le encantó "Mi objetivo por día".
+- **v9.9.2:** el autor informó que el cambio del objetivo funciona perfectamente en su teléfono.
+- **Widget:** el autor informó que lo instaló, lo probó y funciona perfecto.
+- **Copia en Drive/nube:** el autor informó que exportó a Drive y restauró desde la nube al reinstalar.
+- **Sin reporte de prueba en el teléfono:** recordatorio diario, exportaciones Excel/PDF, "Guardar en el teléfono" (Documentos/MiPlata), actualizar un APK sobre otro sin desinstalar, notificaciones y casos específicos de modo oscuro/ocultar montos/dato viejo del widget.
+
+> Regla para quien continúe: **no marcar como probado lo que no figure acá o en las pruebas automáticas de arriba.** Cuando el autor confirme algo nuevo, agregarlo en esta sección con su versión.
+
+## Verificación realizada el 2026-10-17
+
+1. GitHub Actions, ejecución [#11](https://github.com/bustosmartin181-dotcom/Mi-plata/actions/runs/39041786458), terminó con `success`. Pasaron el paso **Construir APK** y la carga del artefacto `mi-plata-APK`. El commit compilado fue `962f1a00a4beb4a53dbfccfcae215122046250c5`; su `index.html`, workflow y `agregar_widget.py` coinciden con los del ZIP recibido.
+2. `node probar_nucleo.js`: pasaron las pruebas del núcleo, el objetivo y la generación XLSX/PDF.
+3. `node --check` sobre el JavaScript de `index.html`: sin errores de sintaxis.
+4. `probar_pantallas.py` en Chromium: 13 comprobaciones pasaron (pantallas Hoy/Días, teclado simulado, anotación de gasto y objetivo).
+5. La IA no probó la app en un dispositivo Android; las pruebas del widget, el objetivo y la copia/restauración en teléfono son reportes del autor.
+
+## Lista para que el autor pruebe y avise (marcar al confirmar)
+
+- [x] Widget: el autor informó que lo instaló y probó; dice que funciona perfecto (sin desglose de casos).
+- [x] Objetivo v9.9.2: el autor confirma que la modificación funciona perfectamente en el teléfono.
+- [x] Copia en Drive/nube: el autor exportó y restauró desde la nube al reinstalar.
+- [ ] Ajustes → Exportar: Excel (.xlsx) se abre; PDF se abre.
+- [ ] Ajustes → "Guardar en el teléfono": aparece el archivo en Documentos/MiPlata.
+- [ ] Recordatorio diario: pide permiso y suena a la hora elegida.
+- [ ] Instalar una versión nueva sobre la anterior sin desinstalar (misma clave) y que los datos sigan.
 
 ## Qué funciona y fue probado (en esta sesión)
 
@@ -29,10 +61,10 @@ Ejecutado en el entorno de la sesión (sin Android ni red):
 
 ## Qué NO se probó
 
-- Ninguna compilación en GitHub Actions de las versiones 9.8 y 9.9 (se desconoce si pasan).
-- Ninguna ejecución de `index.html` en un navegador ni en un teléfono por parte de la IA.
+- Compilación local de la v9.9.2 por la IA (este entorno no tiene Android SDK); GitHub Actions sí la compiló con éxito en la ejecución #11.
+- Ninguna ejecución en un teléfono por parte de la IA. El autor sí reportó pruebas del widget, el objetivo y la copia/restauración desde la nube.
 - Instalar el APK nuevo sobre uno viejo (actualización con la clave fija).
-- Widget: agregarlo a la pantalla de inicio, valores mostrados, botón +, modo oscuro, aviso de dato viejo, actualización al salir de la app, comportamiento con `updatePeriodMillis` (30 min).
+- Widget: el autor informó que funciona perfecto. No detalló por separado modo oscuro, ocultar montos, aviso de dato viejo ni cada condición de actualización.
 - Notificación diaria, permiso de notificaciones en Android 13+.
 - Guardar en Documentos/MiPlata en distintas versiones de Android.
 - Compartir/guardar el Excel y el PDF desde la app.
@@ -44,23 +76,18 @@ Ejecutado en el entorno de la sesión (sin Android ni red):
 - El recordatorio suena todos los días aunque ya se hayan anotado gastos y puede atrasarse unos minutos.
 - El PDF es de texto simple (sin gráficos).
 - Se supone, sin haberlo verificado en el código del plugin, que `Directory.DATA` de Capacitor Filesystem en Android equivale a `context.getFilesDir()`, que es donde el widget busca `widget.json`. **(Sin comprobar.)**
-- Se supone que el proyecto que crea `npx cap add android` con Capacitor 6 no compila Kotlin, por eso el widget está en Java. **(Sin comprobar contra un proyecto real.)**
+- El widget está en Java por la suposición de que el proyecto de Capacitor 6 no compila Kotlin. Esa suposición sigue **sin comprobarse**, pero el Java compiló de verdad en GitHub (el widget se instaló).
 - Se supone que `MainActivity.java` generado por Capacitor es una clase vacía en el paquete `com.bustos.miplata`; `agregar_widget.py` la **reemplaza completa** y falla con error si no encuentra `MainActivity.java`.
 - Guardar en el teléfono puede fallar en Android 9 o anterior (falta el permiso de almacenamiento, que no se agregó al manifiesto) y se desconoce el comportamiento exacto en Android 11+.
 
-## Qué falta para completar el widget y comprobar que funciona
+## Estado actual del widget
 
-1. Subir los archivos y correr el workflow; si falla, leer el error del paso "Agregar el widget" o "Construir APK".
-2. Instalar el APK, mantener apretada la pantalla de inicio → Widgets → "Mi plata — Hoy".
-3. Abrir la app, anotar un gasto, salir: el monto del widget debe cambiar.
-4. Tocar el botón **+** con la app cerrada y con la app abierta: debe abrir la pestaña Hoy con el cursor en "Monto".
-5. Probar con "Ocultar los montos" activado (debe mostrar puntitos) y con modo oscuro.
-6. Probar al día siguiente sin abrir la app: debe decir "Dato de otro día · abrí la app".
+El autor confirma que el widget se instaló, se probó y funciona perfecto. No informó por separado los casos de modo oscuro, montos ocultos y dato de otro día.
 
 ## Problemas que no se resolvieron y por qué
 
-- No se pudo compilar un APK real: el entorno de la sesión no tiene Android SDK ni acceso a red.
-- No se pudo ver el widget ni la notificación: no hay dispositivo ni emulador.
+- La IA no pudo compilar localmente: este entorno no tiene Android SDK. Sí se verificó la compilación del APK en GitHub Actions, ejecución #11.
+- La IA no tiene un dispositivo Android para probar el widget ni las notificaciones; el autor reportó que el widget funciona perfecto. El recordatorio sigue sin reporte de prueba.
 
 ## Tareas pendientes (del backlog, **no implementadas**)
 
