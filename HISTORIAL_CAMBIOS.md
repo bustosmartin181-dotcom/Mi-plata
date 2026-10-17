@@ -66,7 +66,9 @@ Fecha de cambios de código: **2026-10-16**. Actualización de estado y pruebas:
 - **Correspondencia con el ZIP:** los archivos `index.html`, `.github/workflows/construir-apk.yml` y `agregar_widget.py` del commit de la ejecución coinciden con los del código recibido.
 - **Pruebas en la sesión:** `node probar_nucleo.js`, `node --check` del JavaScript de `index.html` y `probar_pantallas.py` en Chromium (13 comprobaciones) pasaron.
 - **Reportes del autor desde el teléfono:** el widget se instaló y se probó; informa que funciona perfecto. La modificación del objetivo de v9.9.2 también funciona perfectamente. Además, exportó una copia a Drive y la restauró desde la nube al reinstalar.
-- **Sin reporte de prueba aún:** exportaciones Excel/PDF en Android, guardado local en Documentos/MiPlata, recordatorio diario y actualización de un APK sobre otro sin desinstalar.
+- **Actualización sobre una versión instalada:** el autor informa que Android no le permite actualizar. La versión anterior y el mensaje de Android no se conocen, así que no se pudo confirmar la causa ni reproducirlo.
+- **Comparación del workflow:** las ejecuciones #10 y #11 usan el mismo `appId` y `debug.keystore`, y el workflow incrementa `versionCode` con el número de ejecución. Una firma distinta sigue siendo posible si la versión instalada es anterior a la clave fija; no se inspeccionó el APK viejo.
+- **Pendiente de prueba en Android:** exportaciones Excel/PDF, guardado local en Documentos/MiPlata y recordatorio diario. No se ha confirmado una actualización exitosa sobre una versión instalada.
 - **Archivos documentales actualizados:** `ESTADO_DEL_PROYECTO.md` y este `HISTORIAL_CAMBIOS.md`. No se modificó el código de la app; `VERSION_APP` permanece en **9.9.2**.
 
 ## Entregas
