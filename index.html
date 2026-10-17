@@ -735,7 +735,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.8';
+const VERSION_APP = '9.9';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -921,10 +921,35 @@ function cargarEstado() {
 function guardarLocal() {
   try { localStorage.setItem(CLAVE_DATOS, JSON.stringify(S)); } catch (_) {}
 }
+/* Resumen para el widget de Android "Mi plata — Hoy" (solo en la app instalada).
+   Lo lee el widget desde el archivo widget.json de la carpeta interna de la app. */
+let temporizadorWidget = null;
+function actualizarWidgetResumen() {
+  if (!CONFIG.apk) return;
+  clearTimeout(temporizadorWidget);
+  temporizadorWidget = setTimeout(async () => {
+    try {
+      const plugins = window.Capacitor && window.Capacitor.Plugins;
+      if (!plugins || !plugins.Filesystem || !S.bienvenida) return;
+      const hoy = hoyISO(), c = calcular(S, hoy), o = objetivoDiario(S, hoy);
+      const clase = semaforo(c, S)[0];
+      const resumen = {
+        quedaHoy: Math.round(c.quedaHoy), gastoHoy: Math.round(c.gastoHoy), saldo: Math.round(c.saldo),
+        color: clase === 'neg' ? 'neg' : clase === 'warn' ? 'warn' : 'ok',
+        oculto: S.ocultar === true,
+        objetivo: o ? Math.round(o.obj) : 0, objetivoSobra: o ? Math.round(o.proyectado) : 0,
+        fecha: hoy, upd: Date.now(), version: VERSION,
+      };
+      await plugins.Filesystem.writeFile({ path: 'widget.json', data: JSON.stringify(resumen), directory: 'DATA', encoding: 'utf8' });
+    } catch (_) { /* silencioso: el widget muestra el último dato */ }
+  }, 400);
+}
+
 function guardar() {            // todo cambio pasa por acá
   if (S.ingresos) S.sueldo = totalIngresos(S);    // el sueldo es la suma de los ingresos
   S.upd = Date.now();
   guardarLocal();
+  actualizarWidgetResumen();
   subirANube();
 }
 
@@ -958,7 +983,7 @@ let intentos = leerIntentos();
 let momentoSegundoPlano = 0, temporizadorInactividad;
 
 const pinPideAlAbrir = () => !!S.pin && S.pinApp !== false;
-const dineroOculto = () => S.ocultar !== false && !UI.mostrarDinero;
+const dineroOculto = () => S.ocultar === true && !UI.mostrarDinero;      // por defecto los números se ven; se ocultan solo si lo activás en Ajustes
 
 /* --- PIN guardado con sal y derivación lenta (PBKDF2) --- */
 const aHex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
@@ -1348,7 +1373,7 @@ async function programarRecordatorio(pedirPermiso) {
    ===================================================================== */
 const campoDinero = () => dineroOculto() ? 'password' : 'text';        // los montos se ven con puntos si están ocultos
 const filaDoble = (izquierda, derecha) => `<div class="row"><span>${izquierda}</span><b>${derecha}</b></div>`;
-const botonOjo = () => `<button class="x" data-a="mostrarOcultar">${etiquetaOjo()}</button>`;
+const botonOjo = () => S.ocultar === true ? `<button class="x" data-a="mostrarOcultar">${etiquetaOjo()}</button>` : '';
 /* Copyright + autor en todas las pantallas */
 const pieCopyright = () =>
   `<div class="copyright">© 2026 ${AUTOR}</div>`;
@@ -1719,7 +1744,8 @@ function tarjetaApariencia() {
     `<button class="${(S.tema || 'auto') === v ? '' : 'sec'}" data-a="tema" data-v="${v}">${t}</button>`).join('');
   const colores = Object.entries(PALETAS).map(([k, p]) =>
     `<button aria-label="${k}" data-a="color" data-v="${k}" style="background:${p[0]};width:40px;height:40px;border-radius:50%;padding:0;border:3px solid ${(S.color || 'azul') === k ? 'var(--tx)' : 'transparent'}"></button>`).join('');
-  return `<div class="card"><h2>Apariencia</h2><div class="mut" style="margin-bottom:8px">Tema</div><div class="f">${temas}</div><div class="mut" style="margin:8px 0">Color</div><div class="f">${colores}</div></div>`;
+  return `<div class="card"><h2>Apariencia</h2><div class="mut" style="margin-bottom:8px">Tema</div><div class="f">${temas}</div><div class="mut" style="margin:8px 0">Color</div><div class="f">${colores}</div>` +
+    `<div class="f" style="margin-top:14px"><input type="checkbox" data-f="ocultar"${S.ocultar === true ? ' checked' : ''}><span>Ocultar los montos con puntitos (••••)</span></div></div>`;
 }
 
 function tarjetaPeriodo() {
@@ -2027,6 +2053,7 @@ const ACCIONES = {
 const CAMBIOS = {
   nombre:        v => { S.nombre = v.trim(); },
   objetivo:      v => { S.objetivo = Math.max(0, aNumero(v)); },
+  ocultar:       (v, el) => { S.ocultar = el.checked; UI.mostrarDinero = false; },
   recOn:         (v, el) => {
     S.recOn = el.checked;
     programarRecordatorio(true).then(r => {
@@ -2111,6 +2138,12 @@ function abrirAnotarGasto() {
   if (monto && monto.focus) monto.focus();
 }
 
+/* Lo llama la app de Android cuando se toca el "+" del widget (se ignora si ya se atendió ese pedido) */
+window.miplataAbrir = (accion, id) => {
+  if (id && window.__abrirId === id) return;
+  if (accion === 'anotar') { abrirAnotarGasto(); window.__abrirId = id; }
+};
+
 /* =====================================================================
    10 · ARRANQUE — conecta todo y pone la app en marcha.
    ===================================================================== */
@@ -2140,6 +2173,7 @@ function iniciar() {
 
   dibujar();
   if (S.recOn) programarRecordatorio(false);
+  actualizarWidgetResumen();
   iniciarNube().then(() => cerrarDias());
   programarCierreNocturno();
   reiniciarInactividad();
