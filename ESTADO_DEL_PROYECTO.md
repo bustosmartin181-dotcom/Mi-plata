@@ -12,6 +12,7 @@ Versión del código: **9.9.2** (`VERSION_APP` en `index.html`). Base: código e
 | Guardar en el teléfono (v9.8) | **Sin probar en ningún teléfono.** Depende de que Android permita escribir en Documentos. |
 | Recordatorio diario (v9.8) | **Sin probar.** Plugin y permisos agregados por el workflow; nunca se vio sonar una notificación. |
 | Copia en Drive/nube y restauración (v9.8) | El autor informó que exportó la copia a Drive y la restauró desde la nube al reinstalar. |
+| Actualizar un APK ya instalado | El autor informa que Android no le permite actualizar a una versión más nueva. Versión instalada y mensaje exacto desconocidos; causa sin confirmar. |
 | Números visibles por defecto (v9.9) | Cambio de 3 líneas; sintaxis comprobada; **sin probar en pantalla**. |
 | Objetivo como límite oficial (v9.9.2) | Probado en navegador real y Node; el autor informó que la modificación funciona perfectamente en su teléfono. |
 | Reordenado de Hoy/Días y teclado (v9.9.1) | **Probado en un navegador real** (Chromium sin ventana, teclado simulado). **Además el autor, tras instalar esta versión, escribió "ahora sí anda todo"** (reporte suyo, general; no detalló punto por punto). |
@@ -25,6 +26,7 @@ Versión del código: **9.9.2** (`VERSION_APP` en `index.html`). Base: código e
 - **v9.9.2:** el autor informó que el cambio del objetivo funciona perfectamente en su teléfono.
 - **Widget:** el autor informó que lo instaló, lo probó y funciona perfecto.
 - **Copia en Drive/nube:** el autor informó que exportó a Drive y restauró desde la nube al reinstalar.
+- **Actualización de la app:** el autor informa que una versión nueva no se instala sobre la anterior; no identifica la versión anterior ni un mensaje de Android.
 - **Sin reporte de prueba en el teléfono:** recordatorio diario, exportaciones Excel/PDF, "Guardar en el teléfono" (Documentos/MiPlata), actualizar un APK sobre otro sin desinstalar, notificaciones y casos específicos de modo oscuro/ocultar montos/dato viejo del widget.
 
 > Regla para quien continúe: **no marcar como probado lo que no figure acá o en las pruebas automáticas de arriba.** Cuando el autor confirme algo nuevo, agregarlo en esta sección con su versión.
@@ -63,7 +65,7 @@ Ejecutado en el entorno de la sesión (sin Android ni red):
 
 - Compilación local de la v9.9.2 por la IA (este entorno no tiene Android SDK); GitHub Actions sí la compiló con éxito en la ejecución #11.
 - Ninguna ejecución en un teléfono por parte de la IA. El autor sí reportó pruebas del widget, el objetivo y la copia/restauración desde la nube.
-- Instalar el APK nuevo sobre uno viejo (actualización con la clave fija).
+- No se reprodujo el rechazo al actualizar. Las ejecuciones #10 y #11 usan el mismo `appId` y el mismo `debug.keystore`; el workflow asigna `versionCode` según el número de ejecución (10 y 11). Si el APK instalado es anterior a la clave fija, una firma distinta sigue siendo una causa posible. Falta identificar versión anterior y mensaje de Android.
 - Widget: el autor informó que funciona perfecto. No detalló por separado modo oscuro, ocultar montos, aviso de dato viejo ni cada condición de actualización.
 - Notificación diaria, permiso de notificaciones en Android 13+.
 - Guardar en Documentos/MiPlata en distintas versiones de Android.
