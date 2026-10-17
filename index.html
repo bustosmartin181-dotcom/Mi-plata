@@ -438,6 +438,7 @@ body::after {
   pointer-events: none; z-index: 5;
 }
 body.sin-degradado::after { display: none; }
+body.teclado nav, body.teclado .fab, body.teclado::after { display: none; }
 </style></head><body>
 <main id="m"></main>
 <nav><button data-t="plan">Plan</button><button data-t="hoy">Hoy</button><button data-t="dias">Días</button><button data-t="ajustes">Ajustes</button></nav>
@@ -735,7 +736,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9';
+const VERSION_APP = '9.9.1';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1392,8 +1393,7 @@ function pantallaHoy(c) {
     S.sueldo ? '' : '<div class="card mut">Primero cargá tu sueldo en Ajustes y revisá tus gastos importantes.</div>',
     /* orden pensado para el uso diario: primero lo que se mira y lo que se hace todos los días */
     tarjetaQuedaHoy(c, clase, mensaje, presupuesto, porcentaje),
-    tarjetaObjetivo(c),
-    tarjetaAnotarGasto(editado, hoy),
+    tarjetaAnotarGasto(editado, hoy),          /* SIEMPRE justo debajo de "Te queda para hoy" */
     tarjetaGastosAnotados(),
     tarjetaRacha(),
     tarjetaAvisoCopia(),
@@ -1505,7 +1505,7 @@ function tarjetaAnotarGasto(editado, hoy) {
   const atajos = editado ? '' :
     '<div class="f"><button class="sec" data-a="dictar">🎤 Dictar</button>' +
     (CONFIG.claude ? '<label class="bt">📷 Foto de ticket<input id="ph" type="file" accept="image/*" capture="environment" hidden></label>' : '') + '</div>';
-  return `<div class="card"><h2>${editado ? 'Editar gasto' : 'Anotar gasto'}</h2>` +
+  return `<div class="card" id="tarjeta-anotar"><h2>${editado ? 'Editar gasto' : 'Anotar gasto'}</h2>` +
     `<div class="f"><input id="am" inputmode="decimal" placeholder="Monto" value="${escapar(monto)}"><input id="nt" placeholder="Detalle" value="${escapar(detalle)}"></div>` +
     categorias + atajos +
     `<div class="f"><input id="dt" type="date" value="${fecha}"></div>` +
@@ -1537,7 +1537,7 @@ function pantallaDias(c) {
       `<span>${pesos(x.presupuesto)}</span><span>${x.gasto ? pesos(x.gasto) : ''}</span>` +
       `<span class="${pasado && x.sobra < 0 ? 'neg' : ''}">${pasado ? pesos(x.sobra) : ''}</span></div>`;
   }).join('');
-  return '<div class="card"><h2>Día por día</h2><div class="mut" style="margin:-4px 0 8px">Tocá un día para ver sus gastos.</div>' +
+  return tarjetaObjetivo(c) + '<div class="card"><h2>Día por día</h2><div class="mut" style="margin:-4px 0 8px">Tocá un día para ver sus gastos.</div>' +
     '<div class="tb mut"><span>Día</span><span>Presupuesto</span><span>Gasto</span><span>Sobrante</span></div>' + filas +
     '<div style="margin-top:8px">' + filaDoble('Total gastado', pesos(suma(S.spent.filter(e => !e.meta), e => e.amt))) +
     filaDoble(`Queda del monto disponible ${botonOjo()}`, dinero(c.saldo)) + '</div></div>';
@@ -2137,6 +2137,26 @@ function abrirAnotarGasto() {
   const monto = document.getElementById('am');
   if (monto && monto.focus) monto.focus();
 }
+
+/* Con el teclado abierto: se esconde la barra de abajo y, si se escribe en "Anotar gasto", la tarjeta
+   entera se lleva a la vista (monto, detalle, categorías, fecha y botón azul juntos, sobre el teclado). */
+(function () {
+  const esCampo = el => !!el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+  let temporizador = null;
+  document.addEventListener('focusin', e => {
+    if (!esCampo(e.target)) return;
+    clearTimeout(temporizador);
+    document.body.classList.add('teclado');
+    const tarjeta = e.target.closest && e.target.closest('#tarjeta-anotar');
+    if (tarjeta) [350, 800].forEach(demora => setTimeout(() => {   // dos intentos: el teclado tarda en abrirse
+      if (document.body.contains(tarjeta) && tarjeta.contains(document.activeElement)) tarjeta.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    }, demora));
+  });
+  document.addEventListener('focusout', () => {
+    clearTimeout(temporizador);
+    temporizador = setTimeout(() => { if (!esCampo(document.activeElement)) document.body.classList.remove('teclado'); }, 300);
+  });
+})();
 
 /* Lo llama la app de Android cuando se toca el "+" del widget (se ignora si ya se atendió ese pedido) */
 window.miplataAbrir = (accion, id) => {

@@ -1,0 +1,44 @@
+# Historial de cambios
+
+Solo se registran los cambios hechos **en la sesión del 2026-10-16** (una conversación con Claude). No existe un historial anterior verificable: el punto de partida fue el APK 9.6 que subió el autor. Qué hizo el autor antes de eso, se desconoce.
+
+Fecha de todos los cambios: **2026-10-16**.
+
+## Punto de partida
+- Archivos recibidos: `Mi-plata_v9_6.apk`, `mi-plata-v9_6-codigo.zip` (código extraído del APK: `www/index.html`, configuración, manifiesto), después `Mi-plata-main.zip` (repositorio de GitHub del autor) y `mi-plata-widget-para-github.zip` (un intento previo de widget hecho en otra herramienta).
+- Hallazgo: el `index.html` del repositorio coincide en tamaño con el de la 9.6 (98.109 bytes). El `index.html` del zip del widget era **de una versión anterior** a la 9.6 (le faltaban funciones como el botón ＋ flotante y "Ver todos"), por eso **no se usó**; solo se tomó la idea.
+
+## v9.7 — Objetivo diario
+- **Motivo:** el autor pidió definir cuánto quiere gastar por día para ver cuánto le sobra para ahorrar.
+- **Cambios:** nueva función `objetivoDiario()`, tarjeta "🎯 Mi objetivo por día" en Hoy, botón "Usar el de la app", campo `S.objetivo`.
+- **Archivos:** `index.html` (modificado).
+- **Pruebas:** cálculo probado en Node con datos de ejemplo; el autor envió captura de la tarjeta funcionando en su teléfono.
+
+## v9.8 — Copias en el teléfono, Excel/PDF, recordatorio, clave fija
+- **Motivo:** (a) en el teléfono de la esposa del autor el menú compartir no ofrecía guardar en el almacenamiento; (b) el autor pidió exportar a Excel y PDF y un recordatorio diario; (c) las actualizaciones no se podían instalar encima porque cada compilación se firmaba con una clave distinta.
+- **Cambios:** `guardarEnDocumentos()` y botón "📱 Guardar en el teléfono"; generadores `xlsxExportar`/`pdfExportar` (sin librerías); recordatorio con `@capacitor/local-notifications`; `debug.keystore` fija y paso nuevo en el workflow; permisos de notificaciones en el workflow.
+- **Archivos:** `index.html` (modificado), `package.json` (modificado: se agregó `@capacitor/local-notifications`), `.github/workflows/construir-apk.yml` (modificado), `debug.keystore` (creado).
+- **Pruebas:** Excel abierto con openpyxl y LibreOffice; PDF validado con qpdf y pdftotext; el resto, solo sintaxis. **No se probó en Android.**
+- **Corrección del consejo dado antes:** el workflow numera la versión solo (`versionCode` = número de ejecución); no hace falta editar `build.gradle`.
+
+## v9.9 — Números visibles, widget, ícono nuevo
+- **Motivo:** el autor vio puntitos en vez de números (era la función "ocultar montos", encendida por defecto y sin ajuste para apagarla); pidió agregar el widget de otro zip, y cambiar el ícono (eligió la opción B).
+- **Cambios:**
+  - `dineroOculto()` ahora solo oculta si `S.ocultar === true`; casilla en Ajustes → Apariencia; el botón 👁 solo aparece si está activado.
+  - Widget: `actualizarWidgetResumen()` escribe `widget.json`; `window.miplataAbrir`; `agregar_widget.py` instala el widget (Java, no Kotlin, porque el proyecto base de Capacitor normalmente no compila Kotlin **(sin comprobar)**) y reemplaza `MainActivity.java`; paso nuevo en el workflow.
+  - Íconos nuevos (`icon-only`, `icon-foreground`, `icon-background`, `splash`, `splash-dark`), generados con Python/Pillow.
+  - Documentación y `probar_nucleo.js`.
+- **Archivos creados:** `agregar_widget.py`, `README.md`, `ESTADO_DEL_PROYECTO.md`, `ARQUITECTURA.md`, `HISTORIAL_CAMBIOS.md`, `INSTRUCCIONES_PARA_OTRA_IA.md`, `probar_nucleo.js`, los cinco PNG (reemplazan a los anteriores del repositorio).
+- **Archivos modificados:** `index.html`, `construir-apk.yml`.
+- **Archivos eliminados:** ninguno. `index-2.html` del repositorio quedó sin usar y sin tocar.
+- **Pruebas:** ver `ESTADO_DEL_PROYECTO.md` (simulación de `agregar_widget.py`, compilación del Java contra clases de reemplazo, prueba del contenido de `widget.json`). **El widget no se compiló ni se instaló.**
+
+## v9.9.1 — Objetivo en Días, Anotar gasto siempre debajo de "Te queda para hoy", botón azul a la vista
+- **Motivo:** el autor pidió (a) mover "Mi objetivo por día" a la solapa Días; (b) que "Anotar gasto" esté siempre debajo de "Te queda para hoy"; (c) que al tocar el botón ＋ el campo Monto y el botón azul "Anotar gasto" se vean juntos: el teclado tapaba el botón y había que subir la pantalla.
+- **Cambios:** `pantallaHoy` ya no incluye `tarjetaObjetivo`; `pantallaDias` la muestra primero; la tarjeta de anotar tiene `id="tarjeta-anotar"`; con un campo enfocado se agrega la clase `teclado` al `body` (esconde la barra, el ＋ y el degradado de abajo) y, si el campo está en esa tarjeta, se la lleva a la vista con `scrollIntoView({block:'end'})` (dos intentos, a los 350 y 800 ms); `VERSION_APP` pasa a `9.9.1`.
+- **Archivos:** `index.html` y `www/index.html` (modificados), `probar_pantallas.py` (creado), documentos (actualizados).
+- **Pruebas:** sintaxis; `probar_nucleo.js`; `probar_pantallas.py` en Chromium sin ventana. **Sin probar con el teclado real de Android.**
+- **Incidente a tener en cuenta:** al empezar este cambio, el `index.html` de la raíz de la carpeta de trabajo era distinto del que se entregó como v9.9: tenía cambios que no se hicieron en esta conversación y le faltaban las funciones `tarjetaGastosAnotados` y `tarjetaRecalibrar` (la pantalla Hoy habría fallado). No se usó. Se partió de la v9.9 entregada (idéntica a `www/index.html`), y la raíz quedó reemplazada por la v9.9.1. Se desconoce quién la modificó.
+
+## Entregas
+- El zip `mi-plata-v9_9-codigo.zip` contiene todo el estado final. Los zips de 9.7 y 9.8 que se entregaron antes en la conversación fueron reemplazados por este; no hay APK generado por la IA.
