@@ -631,7 +631,10 @@ function iniciarPeriodo(S, hoy, { sueldo, previo, inicio, fin }) {
     importantes: c.total, gastado: suma(S.spent.filter(e => !e.meta), e => e.amt), quedo: c.saldo,
   }]);
   const terminadas = avanzarCuotas(S);
-  S.items.forEach(i => { i.p = false; });
+  /* Gastos fijos: los que no tienen el tilde de repetir se sacan (salvo los que están en cuotas);
+     los marcados con "el monto cambia" quedan con el monto vacío. Los gastos de versiones viejas se mantienen. */
+  S.items = S.items.filter(i => tieneCuotas(i) || i.f !== false);
+  S.items.forEach(i => { i.p = false; if (i.v && !tieneCuotas(i)) i.a = 0; });
   S.cierres = {}; S.ajustes = []; S.spent = []; S.recal = null;
   if (sueldo !== undefined) { S.sueldo = sueldo; S.ingresos = [{ cat: 'Sueldo', a: sueldo }]; }
   S.previo = previo; S.start = inicio; S.end = fin;
@@ -738,7 +741,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.2';
+const VERSION_APP = '9.9.3';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1594,8 +1597,12 @@ function tarjetaGastosImportantes() {
     `<input data-f="itemNombre" data-k="${k}" value="${escapar(i.n)}" placeholder="Nombre">` +
     `<input data-f="itemMonto" data-k="${k}" inputmode="decimal" value="${i.a || ''}" placeholder="Monto" style="max-width:110px">` +
     `<button class="x" data-a="quitarGasto" data-i="${k}">✕</button></div>` +
-    (i.d ? `<div class="mut" style="font-size:12px;margin:-4px 0 8px 32px">Se descuenta desde el ${diaYMes(i.d)}</div>` : '') + lineaDeCuotas(i, k)).join('');
-  return '<div class="card"><h2>🧾 Pagar al cobrar</h2><div class="mut" style="margin-bottom:8px">Lo primero que se paga cuando cobrás.</div>' + lista +
+    (i.d ? `<div class="mut" style="font-size:12px;margin:-4px 0 8px 32px">Se descuenta desde el ${diaYMes(i.d)}</div>` : '') +
+    ((i.n || i.a) && !tieneCuotas(i) ? `<div class="f" style="margin:-4px 0 6px 32px;flex-wrap:wrap;gap:4px 14px">` +
+      `<label class="mut" style="margin:0;font-size:13px;display:flex;align-items:center;gap:6px"><input type="checkbox" data-f="itemRepite" data-k="${k}" ${i.f !== false ? 'checked' : ''}>🔁 Repetir el mes que viene</label>` +
+      (i.f !== false ? `<label class="mut" style="margin:0;font-size:13px;display:flex;align-items:center;gap:6px"><input type="checkbox" data-f="itemVariable" data-k="${k}" ${i.v ? 'checked' : ''}>✏️ El monto cambia (queda vacío)</label>` : '') +
+      `</div>` : '') + lineaDeCuotas(i, k)).join('');
+  return '<div class="card"><h2>🧾 Pagar al cobrar</h2><div class="mut" style="margin-bottom:8px">Lo primero que se paga cuando cobrás. Tildá 🔁 en los fijos de todos los meses; si el monto cambia (luz, gas), tildá también ✏️ y el mes que viene aparecen con el monto vacío.</div>' + lista +
     '<button class="sec" data-a="agregarGasto">Agregar gasto</button></div>';
 }
 
@@ -1765,7 +1772,7 @@ function tarjetaPeriodo() {
 }
 
 function tarjetaNuevoPeriodo(c) {
-  return '<div class="card"><h2>Nuevo período</h2><div class="mut" style="margin-bottom:8px">Guarda el período actual en el historial, destilda los gastos importantes y empieza de cero. Tus ingresos se mantienen y las cuotas pasan a la siguiente.</div>' +
+  return '<div class="card"><h2>Nuevo período</h2><div class="mut" style="margin-bottom:8px">Guarda el período actual en el historial y empieza de cero. Quedan los gastos importantes con 🔁 (los de monto variable, con el monto vacío), tus ingresos y las cuotas pasan a la siguiente.</div>' +
     '<label>Saldo previo en cuenta</label>' +
     `<input id="np" inputmode="decimal" value="${Math.max(0, Math.round(c.saldo))}"><label>Día que cobrás (inicio)</label><input id="nd1" type="date" value="${S.end}">` +
     `<label>Próximo cobro (fin)</label><input id="nd2" type="date" value="${mesSiguiente(S.end)}"><div style="margin-top:10px"><button data-a="periodoNuevo">Empezar nuevo período</button></div></div>`;
@@ -1923,7 +1930,7 @@ const ACCIONES = {
   /* --- gastos importantes --- */
   agregarGasto() {      // un gasto nuevo con el período empezado se descuenta desde mañana
     const hoy = hoyISO(), empezado = numeroDeDia(hoy) >= numeroDeDia(S.start);
-    S.items.push({ n: '', a: 0, p: false,
+    S.items.push({ n: '', a: 0, p: false, f: false, v: false,
       d: empezado ? isoDeNumero(Math.min(numeroDeDia(hoy) + 1, numeroDeDia(S.end) - 1)) : '' });
   },
   quitarGasto(el) { S.items.splice(+el.dataset.i, 1); },
@@ -1981,7 +1988,7 @@ const ACCIONES = {
   async periodoNuevo() {
     const inicio = valorDe('nd1'), fin = valorDe('nd2');
     if (!inicio || !fin || numeroDeDia(fin) <= numeroDeDia(inicio)) { aviso('Revisá las fechas.'); return SIN_GUARDAR; }
-    if (!(await confirmar('Se guarda el período actual en el historial y empieza uno nuevo. Tus ingresos se mantienen y las cuotas pasan a la siguiente. ¿Seguir?'))) return SIN_GUARDAR;
+    if (!(await confirmar('Se guarda el período actual en el historial y empieza uno nuevo. Los gastos importantes sin 🔁 se sacan; los de monto variable quedan vacíos. ¿Seguir?'))) return SIN_GUARDAR;
     const terminadas = iniciarPeriodo(S, hoyISO(), { previo: aNumero(valorDe('np')), inicio, fin });
     UI.pestana = 'hoy'; UI.editando = null;
     if (terminadas.length) aviso('Terminaste de pagar: ' + terminadas.join(', '));
@@ -2094,6 +2101,8 @@ const CAMBIOS = {
   itemNombre:    (v, el, k) => { S.items[k].n = v; },
   itemMonto:     (v, el, k) => { S.items[k].a = aNumero(v); },
   itemPagado:    (v, el, k) => { S.items[k].p = el.checked; },
+  itemRepite:    (v, el, k) => { S.items[k].f = el.checked; if (!el.checked) S.items[k].v = false; },
+  itemVariable:  (v, el, k) => { S.items[k].v = el.checked; },
   ingresoCategoria: (v, el, k) => { S.ingresos[k].cat = v; },
   ingresoMonto:  (v, el, k) => { S.ingresos[k].a = aNumero(v); },
   cuotaActual:   (v, el, k) => { const q = S.items[k].q; q.actual = Math.max(1, Math.round(aNumero(v))); if (q.actual > q.total) q.total = q.actual; },
