@@ -788,7 +788,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.6';
+const VERSION_APP = '9.9.7';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1693,10 +1693,10 @@ function contenidoBienvenida() {
     return `<div class="hero"><div class="moneda">💰</div><div class="serif hero-t">Bienvenido${nombre ? ',<br>' + escapar(nombre) : ''}</div>` +
       '<div class="serif hero-s">a Mi plata</div><p class="hero-p">Ordená tu plata, un día a la vez.</p>' +
       `<input data-f="nombre" value="${escapar(nombre)}" placeholder="¿Cómo te llamás? (opcional)" style="max-width:320px;text-align:center">` +
-      '<div class="importar"><div class="importar-fila"><span class="importar-icono">📥</span><span class="importar-txt"><b>¿Ya usabas Mi plata?</b><span>Traé tus datos desde una copia de seguridad.</span></span></div>' +
+      (S.demo ? '' : '<div class="importar"><div class="importar-fila"><span class="importar-icono">📥</span><span class="importar-txt"><b>¿Ya usabas Mi plata?</b><span>Traé tus datos desde una copia de seguridad.</span></span></div>' +
       '<button class="sec" data-a="recuperarNube" style="width:100%;margin-top:12px;background:var(--card)">Importar copia de seguridad</button>' +
-      '<input id="fi" type="file" accept=".json,.txt,application/json,text/plain" style="display:none"></div>' +
-      pieCopyright() + '</div>' + pie(false, 'Comenzar →');
+      '<input id="fi" type="file" accept=".json,.txt,application/json,text/plain" style="display:none"></div>') +
+      pieCopyright() + '</div>' + pie(false, S.demo ? 'Continuar →' : 'Comenzar →');
 
   /* 1 · Cómo funciona, con un ejemplo con números */
   if (paso === 1)
@@ -2005,6 +2005,7 @@ const ACCIONES = {
   agregarIngreso() { (S.ingresos = S.ingresos || []).push({ cat: CATEGORIAS_INGRESO[0], a: 0 }); },
   quitarIngreso(el) { S.ingresos.splice(+el.dataset.i, 1); },
   pasoSiguiente() {
+    if (S.demo && UI.paso === 0) { S.bienvenida = true; UI.paso = 0; UI.pestana = 'hoy'; scrollTo(0, 0); return; }
     if (UI.paso === 3) {                                  // ingresos: hay que cargar al menos uno
       if (!(totalIngresos(S) > 0)) { aviso('Cargá al menos un ingreso para seguir.'); return SIN_GUARDAR; }
       if (numeroDeDia(S.end) <= numeroDeDia(S.start)) { aviso('Revisá las fechas del mes.'); return SIN_GUARDAR; }
@@ -2358,6 +2359,7 @@ async function correrDemo() {
   const frases = S.demoFrases !== false;
   S = estadoDemo(S); S.demoFrases = frases;                 // siempre arranca de los mismos datos de ejemplo
   ajustarCuentasDemo();
+  S.bienvenida = false; UI.paso = 0;                       // arranca en la pantalla de bienvenida
   UI.pestana = 'hoy'; UI.borrador = {}; UI.categoria = ''; UI.editando = null;
   guardar(); dibujar(); scrollTo(0, 0);
   demoCapa(true);
@@ -2365,6 +2367,8 @@ async function correrDemo() {
     await demoCuenta();
     demoFrase('Dejé el Excel y armé mi propia app 📱');
     await pausaDemo(3500);
+    await demoTocar(buscarDemo('.pie button[data-a="pasoSiguiente"]'));      // Continuar →
+    await pausaDemo(1200);
 
     demoFrase('Anoto cada gasto en 5 segundos');
     const tarjeta = buscarDemo('#tarjeta-anotar');
@@ -2401,7 +2405,7 @@ async function correrDemo() {
     demoFrase(''); demoCapa(false); demoCursor(null);
     const cuenta = document.getElementById('demo-cuenta'); if (cuenta) cuenta.remove();
     demoCorriendo = false; demoCancelada = false;
-    UI.pestana = 'hoy'; dibujar();
+    S.bienvenida = true; UI.paso = 0; UI.pestana = 'hoy'; dibujar();
     if (cortada) aviso('Demo cortada.');
   }
 }
