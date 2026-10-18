@@ -439,6 +439,16 @@ body::after {
 }
 body.sin-degradado::after { display: none; }
 body.teclado nav, body.teclado .fab, body.teclado::after { display: none; }
+#demo-capa { position: fixed; inset: 0; z-index: 9998; background: transparent; }
+#demo-frase { position: fixed; left: 12px; right: 12px; top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 9999; padding: 12px 16px; border-radius: 14px; background: rgba(0,0,0,.82); color: #fff; font-size: 20px; font-weight: 700; text-align: center; opacity: 0; transition: opacity .35s; pointer-events: none; }
+#demo-frase.on { opacity: 1; }
+#demo-cuenta { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,.88); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 24px; pointer-events: none; }
+#demo-cuenta .demo-num { font-size: 96px; font-weight: 800; line-height: 1; }
+#demo-cuenta .demo-aviso { font-size: 20px; font-weight: 700; }
+.demo-toque { position: fixed; z-index: 9999; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; border: 3px solid #fff; background: rgba(255,255,255,.35); box-shadow: 0 0 0 2px rgba(0,0,0,.25); pointer-events: none; animation: demoToque .7s ease-out forwards; }
+#demo-cursor { position: fixed; z-index: 9999; width: 2px; margin-left: 1px; border-radius: 1px; pointer-events: none; animation: demoParpadeo 1s steps(1) infinite; }
+@keyframes demoParpadeo { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes demoToque { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
 </style></head><body>
 <main id="m"></main>
 <nav><button data-t="plan">Plan</button><button data-t="hoy">Hoy</button><button data-t="dias">Días</button><button data-t="ajustes">Ajustes</button></nav>
@@ -503,6 +513,43 @@ function estadoInicial(hoy) {
     items: [{ n: '', a: 0, p: false }, { n: '', a: 0, p: false }, { n: '', a: 0, p: false }],
     spent: [], recal: null,
   };
+}
+
+/* Modo demo: datos de ejemplo para grabar videos o sacar capturas sin mostrar la plata real.
+   Los datos reales se guardan aparte (CLAVE_REAL) y vuelven al salir del modo demo. */
+function estadoDemo(real) {
+  const hoy = hoyISO(), n = numeroDeDia(hoy), start = isoDeNumero(n - 11);
+  const D = {
+    demo: true, bienvenida: true, nombre: 'Ana',
+    sueldo: 650000, previo: 0, ingresos: [{ cat: 'Sueldo', a: 650000 }],
+    start, end: mesSiguiente(start),
+    items: [
+      { n: 'Alquiler', a: 180000, p: true }, { n: 'Luz', a: 25000, p: true },
+      { n: 'Gas', a: 12000, p: false, v: true }, { n: 'Internet', a: 20000, p: true },
+      { n: 'Celular', a: 14000, p: false },
+    ],
+    spent: [], recal: null,
+    metas: [{ id: 1, n: 'Vacaciones', t: 300000, g0: 60000, f: '' }],
+    ultimaCopia: Date.now(),
+  };
+  ['tema', 'color', 'pin', 'salt', 'pinApp'].forEach(k => { if (real[k] !== undefined) D[k] = real[k]; });
+  const gastos = [
+    [-11, 12500, 'Supermercado', 'Súper'], [-10, 13500, 'Cena con amigos', 'Salidas'],
+    [-9, 2500, 'SUBE', 'Transporte'], [-9, 9300, 'Almuerzo', 'Comida'],
+    [-8, 15200, 'Supermercado', 'Súper'], [-7, 8400, 'Delivery', 'Comida'], [-7, 3100, 'Kiosco', 'Otro'],
+    [-6, 7100, 'Farmacia', 'Salud'], [-6, 6000, 'Nafta', 'Transporte'],
+    [-5, 8800, 'Almuerzo', 'Comida'], [-5, 2900, 'Café', 'Comida'],
+    [-4, 14400, 'Supermercado', 'Súper'], [-3, 3000, 'SUBE', 'Transporte'], [-3, 8900, 'Panadería y almuerzo', 'Comida'],
+    [-2, 11200, 'Cine', 'Salidas'], [-1, 9400, 'Almuerzo y café', 'Comida'],
+  ];
+  gastos.forEach(([d, amt, note, cat], i) => D.spent.push({ id: Date.now() + i, date: isoDeNumero(n + d), amt, note, cat }));
+  return D;
+}
+
+/* Reparte el saldo entre las cuentas de ejemplo para que coincidan con lo que dice la app */
+function ajustarCuentasDemo() {
+  const saldo = Math.round(calcular(S, hoyISO()).saldo), banco = Math.round(saldo * 0.6), mp = Math.round(saldo * 0.3);
+  S.cuentas = [{ n: 'Banco', m: banco }, { n: 'Mercado Pago', m: mp }, { n: 'Efectivo', m: saldo - banco - mp }];
 }
 
 /* Todos los números del período para el día `hoy`.
@@ -741,7 +788,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.3';
+const VERSION_APP = '9.9.6';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -916,6 +963,7 @@ const AUTOR = 'Martín Enrique Bustos';
 const AUTOR_EMAIL = 'bustosmartin181@gmail.com';
 const AUTOR_WA = '5492612168515';
 const CLAVE_DATOS = 'miplata_v2';
+const CLAVE_REAL = 'miplata_real_antes_demo';   // tus datos reales mientras dura el modo demo
 
 let S = cargarEstado();
 
@@ -931,7 +979,7 @@ function guardarLocal() {
    Lo lee el widget desde el archivo widget.json de la carpeta interna de la app. */
 let temporizadorWidget = null;
 function actualizarWidgetResumen() {
-  if (!CONFIG.apk) return;
+  if (!CONFIG.apk || S.demo) return;
   clearTimeout(temporizadorWidget);
   temporizadorWidget = setTimeout(async () => {
     try {
@@ -982,7 +1030,9 @@ const UI = {
    04 · SEGURIDAD — PIN, bloqueo automático y ocultar el dinero del mes.
    ===================================================================== */
 const ACCIONES_PROTEGIDAS = [
-  'ajustarCuentas', 'csvDias', 'csvImportantes', 'guardarNube', 'guardarEnTelefono', 'exportarXlsx', 'exportarPdf', 'recuperarNube', 'restaurar', 'borrarTodo', 'restaurarCierre'];
+  'ajustarCuentas', 'csvDias', 'csvImportantes', 'guardarNube', 'guardarEnTelefono', 'exportarXlsx', 'exportarPdf', 'recuperarNube', 'restaurar', 'borrarTodo', 'restaurarCierre', 'activarDemo', 'salirDemo'];
+/* En modo demo no se guardan copias ni se restauran datos: así los datos de ejemplo nunca pisan los reales */
+const BLOQUEADAS_EN_DEMO = ['guardarNube', 'guardarEnTelefono', 'recuperarNube', 'restaurar', 'borrarTodo', 'restaurarCierre'];
 
 let bloqueada = !!S.pin && S.pinApp !== false;
 let intentos = leerIntentos();
@@ -1121,7 +1171,7 @@ async function iniciarNube() {
 
 /* Gana siempre la copia más nueva */
 async function traerDeNube() {
-  if (!docNube) return;
+  if (!docNube || S.demo) return;
   try {
     const foto = await docNube.get(), remoto = foto.exists ? foto.data() : null;
     if (remoto && remoto.json && (remoto.upd || 0) > (S.upd || 0)) {
@@ -1137,7 +1187,7 @@ async function traerDeNube() {
 }
 
 async function subirANube(inmediato) {
-  if (!docNube) return;
+  if (!docNube || S.demo) return;
   clearTimeout(temporizadorSubida);
   const subir = async () => {
     try { await docNube.set({ json: JSON.stringify(S), upd: S.upd || Date.now() }); mensajeNube = 'Sincronizado con la nube'; }
@@ -1452,7 +1502,7 @@ function tarjetaRacha() {
 
 /* Aviso en Hoy cuando hace días que no se guarda una copia (no aparece dentro de Claude, que ya sincroniza) */
 function tarjetaAvisoCopia() {
-  if (CONFIG.nube) return '';
+  if (CONFIG.nube || S.demo) return '';
   const e = estadoCopia(S, Date.now());
   if (!e.avisar) return '';
   const texto = e.dias === null ? 'Todavía no guardaste ninguna copia de tus datos.' : `Hace ${e.dias} días que no guardás una copia de tus datos.`;
@@ -1726,9 +1776,22 @@ function pantallaClaude() {
 
 /* ------------------------------ AJUSTES ------------------------------ */
 function pantallaAjustes(c) {
-  return [tarjetaPin(), tarjetaApariencia(), tarjetaRecordatorio(), tarjetaPeriodo(), tarjetaNuevoPeriodo(c), tarjetaCierreNocturno(), tarjetaNube(), tarjetaExcel(),
+  return [S.demo ? tarjetaDemo() : '', tarjetaPin(), tarjetaApariencia(), tarjetaRecordatorio(), tarjetaPeriodo(), tarjetaNuevoPeriodo(c), tarjetaCierreNocturno(), tarjetaNube(), tarjetaExcel(),
     tarjetaAcercaDe(),
-    '<div class="card"><h2>Empezar de cero</h2><button class="sec" data-a="borrarTodo">Borrar todo</button></div>'].join('');
+    S.demo ? '' : tarjetaDemo(),
+    S.demo ? '' : '<div class="card"><h2>Empezar de cero</h2><button class="sec" data-a="borrarTodo">Borrar todo</button></div>'].join('');
+}
+
+function tarjetaDemo() {
+  if (S.demo) return '<div class="card" style="border:2px solid var(--ac)"><h2>🎬 Modo demo activo</h2>' +
+    '<div class="mut" style="margin-bottom:10px">Estás viendo datos de ejemplo. Lo que anotes acá se descarta al salir. Tus datos reales están guardados aparte y vuelven cuando salís.</div>' +
+    '<div style="font-weight:700;margin:4px 0">▶️ Demo automática para grabar</div>' +
+    '<div class="mut" style="margin-bottom:8px">Se escribe sola: anota un gasto y pone el objetivo por día. Pasos: 1) empezá a grabar la pantalla de Android, 2) volvé acá y tocá Reproducir, 3) hay 5 segundos de cuenta regresiva y arranca. Para cortarla, tocá 3 veces la pantalla.</div>' +
+    `<label style="display:flex;gap:8px;align-items:center;color:var(--tx);margin:8px 0"><input type="checkbox" data-f="demoFrases" ${S.demoFrases === false ? '' : 'checked'}>Mostrar frases en pantalla</label>` +
+    '<div class="f" style="flex-wrap:wrap"><button data-a="reproducirDemo">▶️ Reproducir demo</button><button class="sec" data-a="salirDemo">Salir y volver a mis datos</button></div></div>';
+  return '<div class="card"><h2>🎬 Modo demo</h2>' +
+    '<div class="mut" style="margin-bottom:10px">Carga datos de ejemplo para grabar videos o sacar capturas sin mostrar tu plata. Tus datos reales se guardan aparte y vuelven cuando salís.</div>' +
+    '<button class="sec" data-a="activarDemo">Activar modo demo</button></div>';
 }
 
 function tarjetaAcercaDe() {
@@ -1862,7 +1925,7 @@ function dibujar() {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === UI.pestana));
   const pantallas = { plan: pantallaPlan, hoy: pantallaHoy, dias: pantallaDias, claude: pantallaClaude, ajustes: pantallaAjustes };
   principal.innerHTML = (pantallas[UI.pestana] || pantallaHoy)(calcular(S, hoyISO())) +
-    '<div class="mut" style="text-align:center;margin-top:12px;font-size:13px">Versión ' + VERSION + (mensajeNube ? ' · ' + mensajeNube : '') + '</div>' +
+    '<div class="mut" style="text-align:center;margin-top:12px;font-size:13px">Versión ' + VERSION + (S.demo ? ' · modo demo' : '') + (mensajeNube ? ' · ' + mensajeNube : '') + '</div>' +
     pieCopyright();
 }
 
@@ -1876,6 +1939,7 @@ const valorDe = id => document.getElementById(id).value;
 
 /* Recupera los datos desde el texto de una copia (archivo elegido o texto pegado) */
 async function restaurarDesdeTexto(texto) {
+  if (S.demo) { aviso('En modo demo no se puede restaurar. Salí del modo demo en Ajustes.'); return false; }
   let datos;
   try {
     datos = JSON.parse(texto);
@@ -2041,6 +2105,41 @@ const ACCIONES = {
     aviso('Copia guardada.');
   },
   posponerCopia() { S.posponerCopia = Date.now() + 3 * MS_DIA; },
+
+  /* --- modo demo --- */
+  async activarDemo() {
+    if (S.demo) return SIN_GUARDAR;
+    if (!(await confirmar('Se cargan datos de ejemplo para grabar videos. Tus datos reales quedan guardados aparte y vuelven cuando salís. Mientras tanto, lo que anotes se descarta. ¿Activar?'))) return SIN_GUARDAR;
+    const real = JSON.stringify(S);
+    try {
+      localStorage.setItem(CLAVE_REAL, real);
+      if (localStorage.getItem(CLAVE_REAL) !== real) throw new Error('no se guardó');
+    } catch (_) { aviso('No se pudo guardar tu copia, así que no se activó el modo demo.'); return SIN_GUARDAR; }
+    if (CONFIG.apk) { try { await guardarEnDocumentos('mi-plata-antes-del-demo.json', real); } catch (_) {} }
+    S = estadoDemo(S);
+    const hoy = hoyISO();
+    aplicarObjetivo(12000);
+    S.objetivoDesde = isoDeNumero(numeroDeDia(S.start) + 2);
+    ajustarCuentasDemo();
+    UI.pestana = 'ajustes';
+    aviso('Modo demo activado. Acá abajo podés reproducir la demo automática.');
+  },
+  async reproducirDemo() { if (S.demo) await correrDemo(); return SIN_GUARDAR; },
+  async salirDemo() {
+    if (!S.demo) return SIN_GUARDAR;
+    let real = null;
+    try { real = JSON.parse(localStorage.getItem(CLAVE_REAL)); } catch (_) {}
+    if (real && real.items) {
+      if (!(await confirmar('Se descartan los datos de ejemplo y vuelven los tuyos. ¿Salir del modo demo?'))) return SIN_GUARDAR;
+      S = migrarEstado(real);
+      try { localStorage.removeItem(CLAVE_REAL); } catch (_) {}
+      aviso('Listo: volvieron tus datos.');
+    } else {
+      if (!(await confirmar('No encuentro tus datos guardados. ¿Salir igual y empezar de cero? Después podés recuperar tu copia desde la pantalla de inicio.'))) return SIN_GUARDAR;
+      S = estadoInicial(hoyISO());
+    }
+    UI.pestana = 'ajustes';
+  },
   recuperarNube() { const selector = document.getElementById('fi'); if (selector && selector.click) selector.click(); return SIN_GUARDAR; },
   async restaurar() { await restaurarDesdeTexto(valorDe('bk')); return SIN_GUARDAR; },
   async borrarTodo() {
@@ -2091,6 +2190,7 @@ const CAMBIOS = {
   inicio:        v => { if (v) S.start = v; },
   fin:           v => { if (v) S.end = v; },
   pinApp:        (v, el) => { S.pinApp = el.checked; },
+  demoFrases:    (v, el) => { S.demoFrases = el.checked; },
   cuentaNombre:  (v, el, k) => { cuentasDe()[k].n = v; },
   cuentaSaldo:   (v, el, k) => { cuentasDe()[k].m = aNumero(v); },
   cuentaCuenta:  (v, el, k) => { cuentasDe()[k].x = !el.checked; },
@@ -2120,6 +2220,7 @@ async function alHacerClic(e) {
   if (accion) await ejecutar(accion, e.target, false);
 }
 async function ejecutar(accion, elemento, autorizado) {
+  if (S.demo && BLOQUEADAS_EN_DEMO.includes(accion)) { aviso('En modo demo no se puede hacer eso. Salí del modo demo en Ajustes.'); return; }
   if (ACCIONES_PROTEGIDAS.includes(accion) && S.pin && !autorizado) {       // pide PIN y reintenta
     if (!(await pedirPin('Continuar'))) return;
     return ejecutar(accion, elemento, true);
@@ -2171,6 +2272,138 @@ function aplicarObjetivo(valor) {
   S.objetivo = n;
   if (n > 0) { S.objetivoDesde = hoy; S.recal = { day: c.hoyIdx, base: n, obj: true }; }
   else { S.objetivoDesde = ''; if (S.recal && S.recal.obj) S.recal = null; }
+}
+
+/* =====================================================================
+   DEMO AUTOMÁTICA — escribe sola los datos de Ana para grabar la pantalla.
+   Solo anda en modo demo. Tocar 3 veces la pantalla la corta.
+   ===================================================================== */
+let demoCorriendo = false, demoCancelada = false, demoRitmo = 1;     // demoRitmo: 1 = velocidad normal
+const DEMO_CORTADA = 'demo-cortada';
+async function pausaDemo(ms) {
+  const fin = Date.now() + ms * demoRitmo;
+  while (Date.now() < fin) {
+    if (demoCancelada) throw new Error(DEMO_CORTADA);
+    await new Promise(r => setTimeout(r, Math.max(0, Math.min(100, fin - Date.now()))));
+  }
+  if (demoCancelada) throw new Error(DEMO_CORTADA);
+}
+const buscarDemo = sel => document.querySelector(sel);
+function demoFrase(texto) {
+  let f = document.getElementById('demo-frase');
+  if (!texto || S.demoFrases === false) { if (f) f.classList.remove('on'); return; }
+  if (!f) { f = document.createElement('div'); f.id = 'demo-frase'; document.body.appendChild(f); }
+  f.textContent = texto; f.classList.add('on');
+}
+function demoCapa(encender) {
+  let c = document.getElementById('demo-capa');
+  if (!encender) { if (c) c.remove(); return; }
+  if (c) return;
+  c = document.createElement('div'); c.id = 'demo-capa';
+  let toques = [];
+  c.addEventListener('click', () => {                       // 3 toques seguidos cortan la demo
+    const t = Date.now(); toques = toques.filter(x => t - x < 1200).concat(t);
+    if (toques.length >= 3) demoCancelada = true;
+  });
+  document.body.appendChild(c);
+}
+function demoToque(el) {
+  if (!el || !el.getBoundingClientRect) return;
+  const r = el.getBoundingClientRect(), t = document.createElement('div');
+  t.className = 'demo-toque'; t.style.left = (r.left + r.width / 2) + 'px'; t.style.top = (r.top + r.height / 2) + 'px';
+  document.body.appendChild(t); setTimeout(() => t.remove(), 800);
+}
+async function demoTocar(el) { if (!el) return; demoToque(el); await pausaDemo(450); el.click(); await pausaDemo(350); }
+/* Cursor que parpadea al final de lo escrito (el teclado de Android no se abre, así que se dibuja uno) */
+function demoCursor(el, texto) {
+  let c = document.getElementById('demo-cursor');
+  if (!el || !el.getBoundingClientRect) { if (c) c.remove(); return; }
+  if (!c) { c = document.createElement('div'); c.id = 'demo-cursor'; document.body.appendChild(c); }
+  const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+  let ancho = 0;
+  try {
+    const g = (demoCursor.lienzo || (demoCursor.lienzo = document.createElement('canvas'))).getContext('2d');
+    g.font = cs.fontStyle + ' ' + cs.fontWeight + ' ' + cs.fontSize + ' ' + cs.fontFamily;
+    ancho = g.measureText(texto || '').width;
+  } catch (_) {}
+  const alto = (parseFloat(cs.fontSize) || 16) * 1.3;
+  c.style.left = (r.left + (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.borderLeftWidth) || 0) + ancho) + 'px';
+  c.style.top = (r.top + r.height / 2 - alto / 2) + 'px';
+  c.style.height = alto + 'px';
+  c.style.background = cs.color || '#000';
+}
+async function demoEscribir(el, texto, ms) {
+  if (!el) return;
+  el.value = '';
+  try {
+    demoCursor(el, '');
+    await pausaDemo(600);                                      // el cursor parpadea un momento antes de escribir
+    for (const letra of texto) { el.value += letra; demoCursor(el, el.value); await pausaDemo(ms || 130); }
+    await pausaDemo(400);
+  } finally { demoCursor(null); }
+}
+async function demoCuenta() {
+  const c = document.createElement('div'); c.id = 'demo-cuenta'; document.body.appendChild(c);
+  try {
+    for (let n = 5; n >= 1; n--) {
+      c.innerHTML = '<div class="demo-aviso">Empezá a grabar la pantalla</div><div class="demo-num">' + n + '</div>' +
+        '<div class="demo-aviso" style="font-size:14px;font-weight:400">Para cortar: tocá 3 veces la pantalla</div>';
+      await pausaDemo(1000);
+    }
+  } finally { c.remove(); }
+}
+async function correrDemo() {
+  if (demoCorriendo || !S.demo) return;
+  demoCorriendo = true; demoCancelada = false;
+  const frases = S.demoFrases !== false;
+  S = estadoDemo(S); S.demoFrases = frases;                 // siempre arranca de los mismos datos de ejemplo
+  ajustarCuentasDemo();
+  UI.pestana = 'hoy'; UI.borrador = {}; UI.categoria = ''; UI.editando = null;
+  guardar(); dibujar(); scrollTo(0, 0);
+  demoCapa(true);
+  try {
+    await demoCuenta();
+    demoFrase('Dejé el Excel y armé mi propia app 📱');
+    await pausaDemo(3500);
+
+    demoFrase('Anoto cada gasto en 5 segundos');
+    const tarjeta = buscarDemo('#tarjeta-anotar');
+    if (tarjeta && tarjeta.scrollIntoView) tarjeta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    await pausaDemo(1000);
+    await demoTocar(buscarDemo('#am')); await demoEscribir(buscarDemo('#am'), '6500', 150);
+    await demoTocar(buscarDemo('#nt')); await demoEscribir(buscarDemo('#nt'), 'Almuerzo', 110);
+    await demoTocar(buscarDemo('button[data-a="categoria"][data-v="Comida"]'));
+    await pausaDemo(500);
+    await demoTocar(buscarDemo('#tarjeta-anotar button[data-a="anotar"]'));
+    await pausaDemo(600);
+    ajustarCuentasDemo(); guardar(); dibujar();
+
+    demoFrase('Sé cuánta plata me queda para hoy');
+    scrollTo({ top: 0, behavior: 'smooth' });
+    await pausaDemo(4000);
+
+    demoFrase('Elijo cuánto gastar por día y veo cuánto ahorro');
+    await demoTocar(buscarDemo('nav button[data-t="dias"]'));
+    await pausaDemo(800);
+    const campo = buscarDemo('input[data-f="objetivo"]');
+    await demoTocar(campo); await demoEscribir(campo, '12000', 160);
+    await pausaDemo(400);
+    if (campo) campo.dispatchEvent(new Event('change', { bubbles: true }));
+    await pausaDemo(5000);
+
+    demoFrase('Gratis 👉 link en mi bio');
+    await demoTocar(buscarDemo('nav button[data-t="hoy"]'));
+    await pausaDemo(4000);
+  } catch (e) {
+    if (!(e && e.message === DEMO_CORTADA)) console.error(e);
+  } finally {
+    const cortada = demoCancelada;
+    demoFrase(''); demoCapa(false); demoCursor(null);
+    const cuenta = document.getElementById('demo-cuenta'); if (cuenta) cuenta.remove();
+    demoCorriendo = false; demoCancelada = false;
+    UI.pestana = 'hoy'; dibujar();
+    if (cortada) aviso('Demo cortada.');
+  }
 }
 
 /* Con el teclado abierto: se esconde la barra de abajo y, si se escribe en "Anotar gasto", la tarjeta
@@ -2234,6 +2467,7 @@ function iniciar() {
   document.addEventListener('visibilitychange', alCambiarVisibilidad);
 
   dibujar();
+  if (S.demo) aviso('Modo demo activo: son datos de ejemplo. Salí desde Ajustes.');
   if (S.recOn) programarRecordatorio(false);
   actualizarWidgetResumen();
   iniciarNube().then(() => cerrarDias());
