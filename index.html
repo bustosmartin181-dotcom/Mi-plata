@@ -521,12 +521,10 @@ function estadoDemo(real) {
   const hoy = hoyISO(), n = numeroDeDia(hoy), start = isoDeNumero(n - 11);
   const D = {
     demo: true, bienvenida: true, nombre: 'Martín',
-    sueldo: 650000, previo: 0, ingresos: [{ cat: 'Sueldo', a: 650000 }],
+    sueldo: 620000, previo: 0, ingresos: [{ cat: 'Sueldo', a: 620000 }],
     start, end: mesSiguiente(start),
     items: [
-      { n: 'Alquiler', a: 180000, p: true }, { n: 'Luz', a: 25000, p: true },
-      { n: 'Gas', a: 12000, p: false, v: true }, { n: 'Internet', a: 20000, p: true },
-      { n: 'Celular', a: 14000, p: false },
+      { n: 'Alquiler', a: 180000, p: true }, { n: 'Luz', a: 25000, p: true }, { n: 'Internet', a: 20000, p: true },
     ],
     spent: [], recal: null,
     metas: [{ id: 1, n: 'Vacaciones', t: 300000, g0: 60000, f: '' }],
@@ -788,7 +786,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.7';
+const VERSION_APP = '9.9.10';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1011,7 +1009,7 @@ function guardar() {            // todo cambio pasa por acá
 const cuentasDe = () => S.cuentas || (S.cuentas = [
   { n: 'Banco', m: 0 }, { n: 'Mercado Pago', m: 0 }, { n: 'Efectivo', m: 0 }]);
 const metasDe = () => S.metas || (S.metas = [{ id: 1, n: 'Mi meta', t: 0, g0: 0, f: '' }]);
-const nombreUsuario = () => S.nombre === undefined ? '' : S.nombre;
+const nombreUsuario = () => S.demo ? 'Martín' : (S.nombre === undefined ? '' : S.nombre);
 
 /* Estado de la pantalla (no se guarda) */
 const UI = {
@@ -1692,7 +1690,7 @@ function contenidoBienvenida() {
   if (paso === 0)
     return `<div class="hero"><div class="moneda">💰</div><div class="serif hero-t">Bienvenido${nombre ? ',<br>' + escapar(nombre) : ''}</div>` +
       '<div class="serif hero-s">a Mi plata</div><p class="hero-p">Ordená tu plata, un día a la vez.</p>' +
-      `<input data-f="nombre" value="${escapar(nombre)}" placeholder="¿Cómo te llamás? (opcional)" style="max-width:320px;text-align:center">` +
+      `<input data-f="nombre" value="${escapar(nombre)}" placeholder="¿Cómo te llamás? (opcional)"${S.demo ? ' readonly autocomplete="off"' : ''} style="max-width:320px;text-align:center">` +
       (S.demo ? '' : '<div class="importar"><div class="importar-fila"><span class="importar-icono">📥</span><span class="importar-txt"><b>¿Ya usabas Mi plata?</b><span>Traé tus datos desde una copia de seguridad.</span></span></div>' +
       '<button class="sec" data-a="recuperarNube" style="width:100%;margin-top:12px;background:var(--card)">Importar copia de seguridad</button>' +
       '<input id="fi" type="file" accept=".json,.txt,application/json,text/plain" style="display:none"></div>') +
@@ -2005,7 +2003,6 @@ const ACCIONES = {
   agregarIngreso() { (S.ingresos = S.ingresos || []).push({ cat: CATEGORIAS_INGRESO[0], a: 0 }); },
   quitarIngreso(el) { S.ingresos.splice(+el.dataset.i, 1); },
   pasoSiguiente() {
-    if (S.demo && UI.paso === 0) { S.bienvenida = true; UI.paso = 0; UI.pestana = 'hoy'; scrollTo(0, 0); return; }
     if (UI.paso === 3) {                                  // ingresos: hay que cargar al menos uno
       if (!(totalIngresos(S) > 0)) { aviso('Cargá al menos un ingreso para seguir.'); return SIN_GUARDAR; }
       if (numeroDeDia(S.end) <= numeroDeDia(S.start)) { aviso('Revisá las fechas del mes.'); return SIN_GUARDAR; }
@@ -2169,7 +2166,7 @@ const ACCIONES = {
 
 /* Campos que se editan escribiendo: nombre del campo -> qué cambia */
 const CAMBIOS = {
-  nombre:        v => { S.nombre = v.trim(); },
+  nombre:        v => { if (S.demo) return; S.nombre = v.trim(); },
   objetivo:      v => {
     const antes = S.objetivo || 0;
     aplicarObjetivo(aNumero(v));
@@ -2276,7 +2273,7 @@ function aplicarObjetivo(valor) {
 }
 
 /* =====================================================================
-   DEMO AUTOMÁTICA — escribe sola los datos de Martín para grabar la pantalla.
+   DEMO AUTOMÁTICA — escribe sola los datos de ejemplo para grabar la pantalla.
    Solo anda en modo demo. Tocar 3 veces la pantalla la corta.
    ===================================================================== */
 let demoCorriendo = false, demoCancelada = false, demoRitmo = 1;     // demoRitmo: 1 = velocidad normal
@@ -2314,7 +2311,15 @@ function demoToque(el) {
   t.className = 'demo-toque'; t.style.left = (r.left + r.width / 2) + 'px'; t.style.top = (r.top + r.height / 2) + 'px';
   document.body.appendChild(t); setTimeout(() => t.remove(), 800);
 }
-async function demoTocar(el) { if (!el) return; demoToque(el); await pausaDemo(450); el.click(); await pausaDemo(350); }
+async function demoTocar(el) {
+  if (!el) return;
+  if (el.getBoundingClientRect && el.scrollIntoView && !(el.closest && el.closest('.pie, nav'))) {   // si está fuera de vista, se desplaza hasta ahí
+    const r = el.getBoundingClientRect(), alto = typeof innerHeight === 'number' ? innerHeight : 800;
+    if (r.top < 110 || r.bottom > alto - 140) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); await pausaDemo(700); }
+  }
+  demoToque(el); await pausaDemo(450); el.click(); await pausaDemo(350);
+}
+function demoConfirmar(el) { if (el && el.dispatchEvent) el.dispatchEvent(new Event('change', { bubbles: true })); }   // como al salir del campo
 /* Cursor que parpadea al final de lo escrito (el teclado de Android no se abre, así que se dibuja uno) */
 function demoCursor(el, texto) {
   let c = document.getElementById('demo-cursor');
@@ -2333,12 +2338,12 @@ function demoCursor(el, texto) {
   c.style.height = alto + 'px';
   c.style.background = cs.color || '#000';
 }
-async function demoEscribir(el, texto, ms) {
+async function demoEscribir(el, texto, ms, espera) {
   if (!el) return;
   el.value = '';
   try {
     demoCursor(el, '');
-    await pausaDemo(600);                                      // el cursor parpadea un momento antes de escribir
+    await pausaDemo(espera || 600);                            // el cursor parpadea un momento antes de escribir
     for (const letra of texto) { el.value += letra; demoCursor(el, el.value); await pausaDemo(ms || 130); }
     await pausaDemo(400);
   } finally { demoCursor(null); }
@@ -2359,16 +2364,48 @@ async function correrDemo() {
   const frases = S.demoFrases !== false;
   S = estadoDemo(S); S.demoFrases = frases;                 // siempre arranca de los mismos datos de ejemplo
   ajustarCuentasDemo();
+  S.ingresos = [{ cat: 'Sueldo', a: 0 }]; S.items = [];      // la introducción los carga sola
   S.bienvenida = false; UI.paso = 0;                       // arranca en la pantalla de bienvenida
   UI.pestana = 'hoy'; UI.borrador = {}; UI.categoria = ''; UI.editando = null;
   guardar(); dibujar(); scrollTo(0, 0);
   demoCapa(true);
   try {
     await demoCuenta();
+    const siguiente = async () => { await demoTocar(buscarDemo('.pie button[data-a="pasoSiguiente"]')); await pausaDemo(900); };
     demoFrase('Dejé el Excel y armé mi propia app 📱');
-    await pausaDemo(3500);
-    await demoTocar(buscarDemo('.pie button[data-a="pasoSiguiente"]'));      // Continuar →
+    await pausaDemo(3500); await siguiente();                    // Continuar →
+
+    demoFrase('Así funciona: tres pasos y listo');
+    await pausaDemo(5500); await siguiente();
+
+    demoFrase('Sin cuenta ni anuncios: tus datos quedan en tu celu');
+    await pausaDemo(5500); await siguiente();
+
+    demoFrase('Cargo lo que cobro');
     await pausaDemo(1200);
+    const sueldo = buscarDemo('input[data-f="ingresoMonto"]');
+    await demoTocar(sueldo); await demoEscribir(sueldo, '620000', 130); demoConfirmar(sueldo);
+    await pausaDemo(3200); await siguiente();
+
+    demoFrase('Anoto lo que pago sí o sí');
+    await pausaDemo(1000);
+    for (const [nombre, monto] of [['Alquiler', '180000'], ['Luz', '25000'], ['Internet', '20000']]) {
+      await demoTocar(buscarDemo('button[data-a="agregarGasto"]'));
+      const k = S.items.length - 1;
+      if (S.items[k]) { S.items[k].d = ''; dibujar(); }          // en el demo corre desde el inicio del período
+      await pausaDemo(300);
+      const cNombre = buscarDemo('input[data-f="itemNombre"][data-k="' + k + '"]');
+      await demoTocar(cNombre); await demoEscribir(cNombre, nombre, 100, 350); demoConfirmar(cNombre);
+      const cMonto = buscarDemo('input[data-f="itemMonto"][data-k="' + k + '"]');
+      await demoTocar(cMonto); await demoEscribir(cMonto, monto, 120, 350); demoConfirmar(cMonto);
+      await pausaDemo(400);
+    }
+    scrollTo({ top: document.documentElement.scrollHeight || 9999, behavior: 'smooth' });   // muestra "Así queda tu mes"
+    await pausaDemo(4000); await siguiente();
+
+    demoFrase('Y la app me dice cuánto puedo gastar por día');
+    await pausaDemo(5000); await siguiente();                    // Empezar →
+    ajustarCuentasDemo(); guardar(); dibujar();
 
     demoFrase('Anoto cada gasto en 5 segundos');
     const tarjeta = buscarDemo('#tarjeta-anotar');
