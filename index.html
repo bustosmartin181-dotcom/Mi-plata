@@ -520,7 +520,7 @@ function estadoInicial(hoy) {
 function estadoDemo(real) {
   const hoy = hoyISO(), n = numeroDeDia(hoy), start = isoDeNumero(n - 11);
   const D = {
-    demo: true, bienvenida: true, nombre: 'Ana',
+    demo: true, bienvenida: true, nombre: 'Martín',
     sueldo: 650000, previo: 0, ingresos: [{ cat: 'Sueldo', a: 650000 }],
     start, end: mesSiguiente(start),
     items: [
@@ -2276,7 +2276,7 @@ function aplicarObjetivo(valor) {
 }
 
 /* =====================================================================
-   DEMO AUTOMÁTICA — escribe sola los datos de Ana para grabar la pantalla.
+   DEMO AUTOMÁTICA — escribe sola los datos de Martín para grabar la pantalla.
    Solo anda en modo demo. Tocar 3 veces la pantalla la corta.
    ===================================================================== */
 let demoCorriendo = false, demoCancelada = false, demoRitmo = 1;     // demoRitmo: 1 = velocidad normal
