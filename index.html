@@ -787,7 +787,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.11';
+const VERSION_APP = '9.9.12';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1246,11 +1246,93 @@ async function extraerGasto(texto, imagenes) {
   } else aviso('No pude sacar el monto. Probá de nuevo.');
 }
 
-function dictarGasto() {
-  const Reconocedor = window.SpeechRecognition || window.webkitSpeechRecognition;
+/* Dictado de gastos: entiende frases como "quince mil quinientos en el súper" sin internet y sin IA */
+const NUM_PALABRAS = {cero:0,un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12,trece:13,catorce:14,quince:15,dieciseis:16,diecisiete:17,dieciocho:18,diecinueve:19,veinte:20,veintiun:21,veintiuno:21,veintidos:22,veintitres:23,veinticuatro:24,veinticinco:25,veintiseis:26,veintisiete:27,veintiocho:28,veintinueve:29,treinta:30,cuarenta:40,cincuenta:50,sesenta:60,setenta:70,ochenta:80,noventa:90,cien:100,ciento:100,doscientos:200,doscientas:200,trescientos:300,trescientas:300,cuatrocientos:400,cuatrocientas:400,quinientos:500,quinientas:500,seiscientos:600,seiscientas:600,setecientos:700,setecientas:700,ochocientos:800,ochocientas:800,novecientos:900,novecientas:900,mil:1000,luca:1000,lucas:1000,millon:1e6,millones:1e6,palo:1e6,palos:1e6};
+const CLAVES_CAT = [
+  ['Súper', ['super','supermercado','mercado','almacen','chino','hipermercado']],
+  ['Transporte', ['nafta','combustible','gasoil','colectivo','bondi','sube','taxi','uber','remis','peaje','estacionamiento','cochera','pasaje']],
+  ['Salud', ['farmacia','remedio','remedios','medico','doctor','dentista','consulta','medicamento','pastillas','analisis']],
+  ['Salidas', ['cine','salida','boliche','bar','birra','cerveza','cervezas','restaurante','asado','recital','entrada','pelicula','juntada']],
+  ['Comida', ['comida','almuerzo','cena','desayuno','merienda','pizza','pizzas','carne','carniceria','pan','panaderia','verduleria','verdura','fruta','kiosco','cafe','empanadas','helado','gaseosa','bebida','hamburguesa','milanesa','facturas']],
+];
+const RELLENO_DICTADO = new Set(['de','en','el','la','los','las','un','una','por','con','para','a','al','que','pesos','peso','ars','gaste','gasto','pague','pago','compre','me','salio','salieron','fue','fueron','mi','mis','y']);
+const sinTilde = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const esDigito = t => /^\d/.test(t);
+const esNumPalabra = t => Object.prototype.hasOwnProperty.call(NUM_PALABRAS, t);
+const esNum = t => esDigito(t) || esNumPalabra(t);
+function numDigitos(t) {
+  if (/^\d{1,3}(,\d{3})+$/.test(t)) t = t.replace(/,/g, '');
+  t = t.replace(/\.(?=\d{3}(?:\D|$))/g, '').replace(',', '.');
+  const n = parseFloat(t); return isNaN(n) ? 0 : n;
+}
+function valorNumero(toks) {
+  let total = 0, actual = 0;
+  for (const t of toks) {
+    if (t === 'y') continue;
+    if (esDigito(t)) { actual += numDigitos(t); continue; }
+    const v = NUM_PALABRAS[t];
+    if (v >= 1000) { total += (actual || 1) * v; actual = 0; } else actual += v;
+  }
+  return Math.round((total + actual) * 100) / 100;
+}
+/* Devuelve { monto, detalle, cat } o null si no encuentra un monto */
+function gastoDesdeFrase(texto) {
+  const orig = String(texto).toLowerCase().replace(/[$¿?¡!;:()"]/g, ' ').split(/\s+/).filter(Boolean).map(t => t.replace(/[.,]+$/, '')).filter(Boolean);
+  const norm = orig.map(sinTilde);
+  let mejor = null;
+  for (let i = 0; i < norm.length; i++) {
+    if (!esNum(norm[i])) continue;
+    let j = i;
+    while (j + 1 < norm.length) {
+      if (esNum(norm[j + 1])) j++;
+      else if (norm[j + 1] === 'y' && j + 2 < norm.length && esNum(norm[j + 2]) && !esDigito(norm[j]) && !esDigito(norm[j + 2])) j += 2;
+      else break;
+    }
+    const valor = valorNumero(norm.slice(i, j + 1));
+    if (valor > 0 && (!mejor || valor > mejor.valor)) mejor = { ini: i, fin: j, valor };
+    i = j;
+  }
+  if (!mejor) return null;
+  const resto = orig.map((t, k) => [t, norm[k], k]).filter(x => x[2] < mejor.ini || x[2] > mejor.fin);
+  while (resto.length && RELLENO_DICTADO.has(resto[0][1])) resto.shift();
+  while (resto.length && RELLENO_DICTADO.has(resto[resto.length - 1][1])) resto.pop();
+  let detalle = resto.map(x => x[0]).join(' ');
+  detalle = detalle.charAt(0).toUpperCase() + detalle.slice(1);
+  const palabras = new Set(resto.map(x => x[1]));
+  let cat = '';
+  for (const [nombre, claves] of CLAVES_CAT) if (claves.some(c => palabras.has(c))) { cat = nombre; break; }
+  return { monto: mejor.valor, detalle, cat };
+}
+
+function usarFraseDictada(t) {
+  if (hayClaude()) { aviso('Escuché: ' + t); extraerGasto('Frase: ' + t, []); return; }
+  const g = gastoDesdeFrase(t);
+  if (!g) { aviso('Escuché: «' + t + '». No entendí el monto, probá de nuevo.'); return; }
+  UI.borrador = { amt: g.monto, note: g.detalle }; UI.editando = null;
+  if (g.cat) UI.categoria = g.cat;
+  dibujar();
+  aviso('Escuché: ' + t + '. Revisá y tocá Anotar gasto.');
+}
+
+async function dictarGasto() {
+  const SR = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SpeechRecognition;
+  if (SR) {            // dentro del APK: dictado nativo de Android
+    try {
+      const disp = await SR.available();
+      if (!disp || !disp.available) { aviso('Este teléfono no tiene dictado por voz. Usá el micrófono del teclado.'); return; }
+      let permiso = await SR.checkPermissions();
+      if (permiso.speechRecognition !== 'granted') permiso = await SR.requestPermissions();
+      if (permiso.speechRecognition !== 'granted') { aviso('Sin permiso de micrófono no puedo escucharte. Podés darlo en Ajustes del teléfono → Apps → Mi plata → Permisos.'); return; }
+      const r = await SR.start({ language: 'es-AR', maxResults: 3, prompt: 'Decí el gasto. Ej: quince mil en el súper', partialResults: false, popup: true });
+      const t = r && r.matches && r.matches[0];
+      if (t) usarFraseDictada(t); else aviso('No te escuché. Probá de nuevo.');
+    } catch (_) { aviso('No se pudo dictar. Probá de nuevo o usá el micrófono del teclado.'); }
+    return;
+  }
+  const Reconocedor = window.SpeechRecognition || window.webkitSpeechRecognition;   // versión web
   if (!Reconocedor) { aviso('Acá no hay dictado. Usá el micrófono del teclado del teléfono.'); return; }
   const r = new Reconocedor(); r.lang = 'es-AR'; r.interimResults = false;
-  r.onresult = ev => { const t = ev.results[0][0].transcript; aviso('Escuché: ' + t); extraerGasto('Frase: ' + t, []); };
+  r.onresult = ev => usarFraseDictada(ev.results[0][0].transcript);
   r.onerror = () => aviso('No pude usar el micrófono acá. Probá con el micrófono del teclado.');
   try { r.start(); aviso('Escuchando… decí el gasto'); } catch (_) { aviso('No pude usar el micrófono.'); }
 }
@@ -1713,7 +1795,7 @@ function contenidoBienvenida() {
     const puntos = CONFIG.nube
       ? ['Sin anuncios.', 'Tus datos se guardan en tu cuenta de Claude: nadie más los ve.', 'Podés ponerle PIN a la app.', 'Podés guardar una copia cuando quieras.']
       : ['Sin cuenta ni registro.', 'Sin anuncios.', 'Tus números se guardan en tu teléfono y solo salen si vos guardás una copia.',
-         'No pide acceso a tus contactos, ubicación, cámara ni micrófono.', 'Podés ponerle PIN para que nadie vea tus números.', 'Las copias las guardás vos, en tu Drive.'];
+         'No pide acceso a tus contactos, ubicación ni cámara. El micrófono solo se usa si tocás Dictar.', 'Podés ponerle PIN para que nadie vea tus números.', 'Las copias las guardás vos, en tu Drive.'];
     return titulo('Tu plata, tu decisión', 'Lo que tenés que saber antes de empezar.') + '<div class="card">' +
       puntos.map(t => `<div class="f" style="align-items:flex-start"><span style="color:var(--ok);font-weight:700">✓</span><span>${t}</span></div>`).join('') + '</div>' +
       (CONFIG.apk ? '<div class="mut" style="font-size:13px">Podés comprobar los permisos en Ajustes de Android → Apps → Mi plata → Permisos.</div>' : '') +
