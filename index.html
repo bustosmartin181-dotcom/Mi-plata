@@ -459,7 +459,7 @@ body.teclado nav, body.teclado .fab, body.teclado::after { display: none; }
 .anillo { flex: none; position: relative; width: 92px; height: 92px; }
 .anillo svg { width: 92px; height: 92px; transform: rotate(-90deg); }
 .anillo b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; }
-.chip { display: inline-flex; flex: none; width: 34px; height: 34px; border-radius: 12px; align-items: center; justify-content: center; margin-right: 10px; font-style: normal; font-size: 1.1rem; background: color-mix(in srgb, var(--kc) 20%, transparent); }
+.kchip { display: inline-flex; flex: none; width: 34px; height: 34px; border-radius: 12px; align-items: center; justify-content: center; margin-right: 10px; font-style: normal; font-size: 1.1rem; background: color-mix(in srgb, var(--kc) 20%, transparent); }
 .k0 { --kc: #E8833A; } .k1 { --kc: #3B82C4; } .k2 { --kc: #3D9B6E; } .k3 { --kc: #B35BC4; } .k4 { --kc: #D9534F; } .k5 { --kc: #7C8A82; }
 .grafico { width: 100%; height: auto; display: block; }
 .fab { width: 64px; height: 64px; font-size: 2rem; box-shadow: 0 8px 24px rgba(0,0,0,0.28); }
@@ -1656,7 +1656,7 @@ function anillo(gastadoPct, clase) {
 }
 function chipCategoria(cat) {
   const k = CATEGORIAS_GASTO.findIndex(x => x[1] === cat);
-  return `<i class="chip k${k < 0 ? 5 : k}">${k < 0 ? '💸' : CATEGORIAS_GASTO[k][0]}</i>`;
+  return `<i class="kchip k${k < 0 ? 5 : k}">${k < 0 ? '💸' : CATEGORIAS_GASTO[k][0]}</i>`;
 }
 /* Una barra por día: verde = dentro del límite, rojo = te pasaste. La raya es la base por día. */
 function graficoDias(c) {
