@@ -450,6 +450,19 @@ body.teclado nav, body.teclado .fab, body.teclado::after { display: none; }
 #linea-manana.demo-resalte { background: var(--ac-soft); outline: 3px solid var(--ac); outline-offset: 4px; border-radius: 10px; font-size: 1.25em; transition: all .3s; }
 @keyframes demoParpadeo { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @keyframes demoToque { from { transform: scale(.4); opacity: 1; } to { transform: scale(1.3); opacity: 0; } }
+
+/* ---- Diseño v9.9.14: más redondeado, anillo de progreso, iconos de color y gráficos ---- */
+:root { --radius: 22px; }
+.card { border-color: var(--bd); }
+.hero-fila { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 6px 0 8px; }
+.hero-card .bar { display: none; }
+.anillo { flex: none; position: relative; width: 92px; height: 92px; }
+.anillo svg { width: 92px; height: 92px; transform: rotate(-90deg); }
+.anillo b { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; }
+.chip { display: inline-flex; flex: none; width: 34px; height: 34px; border-radius: 12px; align-items: center; justify-content: center; margin-right: 10px; font-style: normal; font-size: 1.1rem; background: color-mix(in srgb, var(--kc) 20%, transparent); }
+.k0 { --kc: #E8833A; } .k1 { --kc: #3B82C4; } .k2 { --kc: #3D9B6E; } .k3 { --kc: #B35BC4; } .k4 { --kc: #D9534F; } .k5 { --kc: #7C8A82; }
+.grafico { width: 100%; height: auto; display: block; }
+.fab { width: 64px; height: 64px; font-size: 2rem; box-shadow: 0 8px 24px rgba(0,0,0,0.28); }
 </style></head><body>
 <main id="m"></main>
 <nav><button data-t="plan">Plan</button><button data-t="hoy">Hoy</button><button data-t="dias">Días</button><button data-t="ajustes">Ajustes</button></nav>
@@ -588,13 +601,46 @@ function calcular(S, hoy) {
   for (let i = desde; i <= hoyIdx; i++) acumulado += presupuestoDia(i);
   const quedaHoy = acumulado - gastado(desde, hoyIdx);
   const hayManana = hoyIdx < dias - 1;
+  const saldoPeriodo = disp - suma(S.spent.filter(e => !e.meta), e => e.amt);
+
+  /* MODO FONDO: lo que no se gasta de cada día NO pasa al día siguiente: va a un fondo aparte.
+     Cada día arranca con su base. Si te pasás, depende de S.fondoExceso:
+       'siguiente' (por defecto): lo que te pasaste se descuenta del día siguiente.
+       'fondo': lo que te pasaste se descuenta del fondo.
+       'aparte': no se descuenta de ningún lado. */
+  const modoFondo = !!S.modoFondo, regla = S.fondoExceso === 'aparte' ? 'aparte' : 'siguiente';
+  let filas = null, fondo = { activo: false }, quedaHoyF = quedaHoy, mananaF = null;
+  if (modoFondo) {
+    filas = []; let arrastre = 0;
+    for (let i = 0; i < dias; i++) {
+      if (recal && i === recal.day) arrastre = 0;
+      const sin = presupuestoDia(i);
+      const presupuesto = i <= hoyIdx + 1 ? sin + arrastre : sin;
+      const gasto = gastado(i, i);
+      const sobra = presupuesto - gasto;
+      filas.push({ i, presupuesto, gasto, sobra, aporte: regla === 'fondo' ? sobra : Math.max(0, sobra) });
+      arrastre = regla === 'siguiente' ? Math.min(0, sobra) : 0;
+    }
+    const cerrados = Math.min(dias, Math.max(0, numeroDeDia(hoy) - numeroDeDia(S.start)));
+    const ahorroPeriodo = suma(filas.slice(0, cerrados), f => f.aporte);
+    const usos = suma(S.fondoUsos || [], x => +x.amt || 0), previo = +S.fondoPrev || 0;
+    quedaHoyF = filas[hoyIdx].presupuesto - filas[hoyIdx].gasto;
+    mananaF = hayManana ? presupuestoDia(hoyIdx + 1) + (regla === 'siguiente' ? Math.min(0, quedaHoyF) : 0) : null;
+    fondo = {
+      activo: true, regla, fondoPrev: previo, ahorroPeriodo, usos,
+      total: previo + ahorroPeriodo - usos,
+      acumulado: previo + (+S.fondoRetirado || 0) + ahorroPeriodo,     // lo ahorrado en total: nunca baja
+      hoySuma: regla === 'fondo' ? quedaHoyF : Math.max(0, quedaHoyF),
+      disponible: saldoPeriodo - ahorroPeriodo,
+    };
+  }
 
   return {
     total, porPagar, disp, dias, hoyIdx, base, recal, extra, presupuestoDia,
     baseHoy: presupuestoDia(hoyIdx),
     baseManana: hayManana ? presupuestoDia(hoyIdx + 1) : null,
-    manana: hayManana ? presupuestoDia(hoyIdx + 1) + quedaHoy : null,
-    gastoHoy, quedaHoy,
+    manana: modoFondo ? mananaF : (hayManana ? presupuestoDia(hoyIdx + 1) + quedaHoy : null),
+    gastoHoy, quedaHoy: modoFondo ? quedaHoyF : quedaHoy, filas, fondo,
     faltan: dias - hoyIdx,
     saldo: disp - suma(S.spent.filter(e => !e.meta), e => e.amt),
     gastadoAntesDeHoy: gastado(-1e9, hoyIdx - 1),
@@ -604,6 +650,11 @@ function calcular(S, hoy) {
 /* Tabla día por día: presupuesto (con lo que arrastra), gasto y sobrante */
 function diasDelPeriodo(S, hoy) {
   const c = calcular(S, hoy), salida = [];
+  if (c.fondo.activo) return c.filas.map(f => {
+    const n = numeroDeDia(S.start) + f.i;
+    return { i: f.i, iso: isoDeNumero(n), dia: NOMBRES_DIA[new Date(n * MS_DIA).getUTCDay()],
+             presupuesto: f.presupuesto, gasto: f.gasto, sobra: f.sobra };
+  });
   let arrastre = 0;
   for (let i = 0; i < c.dias; i++) {
     if (c.recal && i === c.recal.day) arrastre = 0;
@@ -636,7 +687,7 @@ function conciliar(S, c) {
   return {
     hayCuentas: cuentas.some(x => (+x.m || 0) > 0),
     total,
-    diferencia: total - c.saldo - apartadoEnMetas,
+    diferencia: total - c.saldo - apartadoEnMetas - (c.fondo.activo ? c.fondo.fondoPrev - c.fondo.usos : 0),
   };
 }
 
@@ -675,7 +726,10 @@ function iniciarPeriodo(S, hoy, { sueldo, previo, inicio, fin }) {
   S.hist = (S.hist || []).concat([{
     start: S.start, end: S.end, sueldo: S.sueldo, previo: S.previo,
     importantes: c.total, gastado: suma(S.spent.filter(e => !e.meta), e => e.amt), quedo: c.saldo,
+    ahorro: c.fondo.activo ? redondear2(c.fondo.ahorroPeriodo) : undefined,
   }]);
+  /* modo fondo: lo ahorrado queda guardado aparte y no entra en el presupuesto del período nuevo */
+  if (c.fondo.activo) { S.fondoPrev = redondear2(c.fondo.total); S.fondoRetirado = redondear2((+S.fondoRetirado || 0) + c.fondo.usos); S.fondoUsos = []; }
   const terminadas = avanzarCuotas(S);
   /* Gastos fijos: los que no tienen el tilde de repetir se sacan (salvo los que están en cuotas);
      los marcados con "el monto cambia" quedan con el monto vacío. Los gastos de versiones viejas se mantienen. */
@@ -787,7 +841,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.12';
+const VERSION_APP = '9.9.15';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -841,6 +895,7 @@ function datosExportar(S, hoy) {
     ['Saldo', c.saldo, true],
   ];
   if (o) resumen.push(['Objetivo por día', o.obj, true], ['Te sobra si lo cumplís', o.proyectado, true]);
+  if (c.fondo.activo) resumen.push(['Ahorrado en el período', c.fondo.ahorroPeriodo, true], ['Fondo de ahorro total', c.fondo.total, true]);
   return {
     hoy, fecha, resumen,
     dias: dias.map(x => ({ fecha: fecha(x.iso), dia: x.dia, presupuesto: x.presupuesto, gasto: x.gasto, sobra: x.sobra,
@@ -1530,6 +1585,7 @@ function pantallaHoy(c) {
     /* orden pensado para el uso diario: primero lo que se mira y lo que se hace todos los días */
     tarjetaQuedaHoy(c, clase, mensaje, presupuesto, porcentaje),
     tarjetaAnotarGasto(editado, hoy),          /* SIEMPRE justo debajo de "Te queda para hoy" */
+    tarjetaFondo(c),
     tarjetaGastosAnotados(),
     tarjetaRacha(),
     tarjetaAvisoCopia(),
@@ -1592,12 +1648,66 @@ function tarjetaAvisoCopia() {
     '<div class="f" style="margin:0"><button data-a="guardarNube">Guardar ahora</button>' + (CONFIG.apk ? '<button class="sec" data-a="guardarEnTelefono">📱 En el teléfono</button>' : '') + '<button class="sec" data-a="posponerCopia">Más tarde</button></div></div>';
 }
 
+const colorClase = clase => clase === 'neg' ? 'var(--bad)' : clase === 'warn' ? 'var(--warn)' : 'var(--ok)';
+function anillo(gastadoPct, clase) {
+  const resto = Math.max(0, Math.min(100, 100 - gastadoPct)), largo = 2 * Math.PI * 38;
+  return `<div class="anillo"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="var(--bd)" stroke-width="10"/>` +
+    `<circle cx="50" cy="50" r="38" fill="none" stroke="${colorClase(clase)}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${(largo * resto / 100).toFixed(1)} ${largo.toFixed(1)}"/></svg><b>${Math.round(resto)}%</b></div>`;
+}
+function chipCategoria(cat) {
+  const k = CATEGORIAS_GASTO.findIndex(x => x[1] === cat);
+  return `<i class="chip k${k < 0 ? 5 : k}">${k < 0 ? '💸' : CATEGORIAS_GASTO[k][0]}</i>`;
+}
+/* Una barra por día: verde = dentro del límite, rojo = te pasaste. La raya es la base por día. */
+function graficoDias(c) {
+  const dias = diasDelPeriodo(S, hoyISO()).filter(x => x.i <= c.hoyIdx);
+  if (dias.length < 2) return '';
+  const tope = Math.max(1, c.baseHoy, ...dias.map(x => x.gasto)) * 1.1, W = 300, H = 90, ancho = W / dias.length;
+  const barras = dias.map(x => { const h = Math.max(1, x.gasto / tope * H);
+    return `<rect x="${(x.i * ancho + ancho * 0.15).toFixed(1)}" y="${(H - h).toFixed(1)}" width="${(ancho * 0.7).toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${x.gasto > x.presupuesto + 0.5 ? 'var(--bad)' : 'var(--ok)'}"/>`; }).join('');
+  const y = H - c.baseHoy / tope * H;
+  return '<div class="card"><h2>Mis días</h2>' + `<svg class="grafico" viewBox="0 0 ${W} ${H}">${barras}<line x1="0" x2="${W}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--mut)" stroke-dasharray="4 4"/></svg>` +
+    '<div class="mut" style="font-size:13px;margin-top:6px">Cada barra es un día: verde = dentro del límite, rojo = te pasaste. La raya es tu base por día.</div></div>';
+}
+function lineaFondo(c) {
+  const f = c.filas || [], pts = []; let acum = 0;
+  f.slice(0, c.hoyIdx).forEach(x => { acum += x.aporte; pts.push(acum); });
+  if (pts.length < 2) return '';
+  const min = Math.min(0, ...pts), max = Math.max(1, ...pts), W = 300, H = 50;
+  const p = pts.map((v, k) => `${(k / (pts.length - 1) * W).toFixed(1)},${(H - (v - min) / (max - min) * (H - 6) - 3).toFixed(1)}`).join(' ');
+  return `<svg class="grafico" viewBox="0 0 ${W} ${H}" style="margin-top:8px"><polyline points="${p}" fill="none" stroke="var(--ok)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
 function tarjetaQuedaHoy(c, clase, mensaje, presupuesto, porcentaje) {
-  return `<div class="card"><div class="mut">Te queda para hoy</div><div class="num ${clase}">${pesosConCentavos(c.quedaHoy)}</div>` +
+  return `<div class="card hero-card"><div class="mut">Te queda para hoy</div><div class="hero-fila"><div class="num ${clase}" style="margin:0;font-size:2.5rem">${pesosConCentavos(c.quedaHoy)}</div>${anillo(porcentaje, clase)}</div>` +
     `<div class="bar ${clase}"><i style="width:${porcentaje}%"></i></div>` +
     `<div class="mut">Presupuesto de hoy ${pesos(presupuesto)}. Gastaste ${pesos(c.gastoHoy)}.</div>` +
+    (c.fondo.activo ? `<div class="mut" style="margin-top:4px">Lo que no gastes hoy va a tu fondo: <b class="${c.fondo.hoySuma < 0 ? 'neg' : ''}">${pesosConCentavos(c.fondo.hoySuma)}</b></div>` : '') +
     (c.manana != null ? `<div id="linea-manana" style="margin-top:8px">Mañana tendrás <b class="${c.manana < 0 ? 'neg' : ''}">${pesosConCentavos(c.manana)}</b></div>` : '') +
     (mensaje ? `<div class="${clase}" style="font-weight:600;margin-top:6px">${mensaje}</div>` : '') + '</div>';
+}
+
+/* Fondo de ahorro: se ve siempre en Hoy, sin tener que ir a otra pestaña */
+function tarjetaFondo(c) {
+  const f = c.fondo;
+  if (!f.activo) return '';
+  const usos = S.fondoUsos || [];
+  const retirado = f.acumulado - f.total;
+  const detalle = [
+    'Este período: <b>' + dinero(f.ahorroPeriodo) + '</b>',
+    f.acumulado - f.ahorroPeriodo ? 'De antes: <b>' + dinero(f.acumulado - f.ahorroPeriodo) + '</b>' : '',
+    retirado > 0 ? 'Retiraste: <b>' + dinero(retirado) + '</b> · Te quedan: <b>' + dinero(f.total) + '</b>' : '',
+  ].filter(Boolean).join(' · ');
+  const formulario = UI.usandoFondo
+    ? '<div style="margin-top:10px;padding:12px;border:1px solid var(--ac);border-radius:10px"><label>¿Cuánto sacás del fondo?</label>' +
+      `<input id="fu" inputmode="decimal" placeholder="Monto"><label>¿Para qué?</label><input id="fn" placeholder="Detalle (opcional)">` +
+      '<div class="f" style="margin:10px 0 0"><button class="sec" data-a="cancelarUsoFondo">Cancelar</button><button data-a="confirmarUsoFondo">Sacar</button></div></div>'
+    : '<div class="f" style="margin-top:8px"><button class="sec" data-a="usarFondo">Usar del fondo</button></div>';
+  const lista = usos.length
+    ? '<div style="margin-top:8px">' + usos.map((x, k) => `<div class="row"><span>${diaYMes(x.date)} ${escapar(x.note || 'Uso del fondo')}</span><span><b>${dinero(-x.amt)}</b><button class="x" data-a="quitarUsoFondo" data-i="${k}">✕</button></span></div>`).join('') + '</div>'
+    : '';
+  return `<div class="card"><div class="mut">Mi fondo de ahorro ${botonOjo()}</div><div class="num">${dinero(f.acumulado)}</div>` +
+    `<div class="mut">${detalle}</div>` + lineaFondo(c) + formulario + lista + '</div>';
 }
 
 function tarjetaSaldo(c) {
@@ -1628,7 +1738,12 @@ function tarjetaCuentas(c) {
       S.ajustes.map((x, i) => `<div class="row"><span>${diaYMes(x.date)} ${escapar(x.note)}</span><span><b>${dineroOculto() ? '••••' : pesos(x.amt)}</b>` +
         `<button class="x" data-a="quitarRecomposicion" data-i="${i}">✕</button></span></div>`).join('') + '</div>'
     : '';
-  return '<div class="card"><h2>Mis cuentas</h2>' + filas + comparacion +
+  const resumenFondo = c.fondo.activo
+    ? '<div style="margin:8px 0">' + filaDoble('Disponible para gastar', dinero(c.fondo.disponible)) +
+      filaDoble('Fondo de ahorro', dinero(c.fondo.total)) +
+      filaDoble('Total (lo que tendrías en cuentas)', dinero(c.fondo.disponible + c.fondo.total)) + '</div>'
+    : '';
+  return '<div class="card"><h2>Mis cuentas</h2>' + filas + resumenFondo + comparacion +
     '<div class="f" style="margin-top:8px;flex-wrap:wrap"><button class="sec" data-a="agregarCuenta">Agregar cuenta</button>' +
     (cc.hayCuentas ? '<button data-a="ajustarCuentas">Ajustar con las cuentas</button>' : '') + '</div>' + pendiente + recomposiciones +
     '<div class="mut" style="font-size:13px;margin-top:6px">Las cuentas tildadas cuentan. Lo que apartaste para tus metas se considera dentro de ellas. Destildá, por ejemplo, la plata de reservas.</div></div>';
@@ -1661,7 +1776,7 @@ function tarjetaRecalibrar(c) {
 function tarjetaGastosAnotados() {
   const todos = [...S.spent].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
   const lista = UI.verTodos ? todos.slice(0, 60) : todos.slice(0, 5);     // en Hoy se ven los últimos 5
-  const fila = e => `<div class="row"><span>${diaYMes(e.date)} ${emojiCategoria(e.cat)}${escapar(e.note || e.cat || '')}</span><span><b>${pesos(e.amt)}</b>` +
+  const fila = e => `<div class="row"><span style="display:flex;align-items:center">${chipCategoria(e.cat)}<span>${escapar(e.note || e.cat || 'Gasto')}<br><small class="mut">${diaYMes(e.date)}</small></span></span><span><b>${pesos(e.amt)}</b>` +
     `<button class="x" data-a="editar" data-i="${e.id}">✎</button><button class="x" data-a="borrar" data-i="${e.id}">✕</button></span></div>`;
   return '<div class="card"><h2>Gastos anotados</h2>' + (lista.length ? lista.map(fila).join('') : '<div class="mut">Todavía no anotaste gastos.</div>') +
     (todos.length > 5 ? `<button class="sec" data-a="verTodos" style="width:100%;margin-top:10px">${UI.verTodos ? 'Ver solo los últimos 5' : 'Ver todos (' + todos.length + ')'}</button>` : '') + '</div>';
@@ -1676,10 +1791,11 @@ function pantallaDias(c) {
       `<span>${pesos(x.presupuesto)}</span><span>${x.gasto ? pesos(x.gasto) : ''}</span>` +
       `<span class="${pasado && x.sobra < 0 ? 'neg' : ''}">${pasado ? pesos(x.sobra) : ''}</span></div>`;
   }).join('');
-  return tarjetaObjetivo(c) + '<div class="card"><h2>Día por día</h2><div class="mut" style="margin:-4px 0 8px">Tocá un día para ver sus gastos.</div>' +
+  return tarjetaObjetivo(c) + graficoDias(c) + '<div class="card"><h2>Día por día</h2><div class="mut" style="margin:-4px 0 8px">Tocá un día para ver sus gastos.</div>' +
     '<div class="tb mut"><span>Día</span><span>Presupuesto</span><span>Gasto</span><span>Sobrante</span></div>' + filas +
     '<div style="margin-top:8px">' + filaDoble('Total gastado', pesos(suma(S.spent.filter(e => !e.meta), e => e.amt))) +
-    filaDoble(`Queda del monto disponible ${botonOjo()}`, dinero(c.saldo)) + '</div></div>';
+    filaDoble(`Queda del monto disponible ${botonOjo()}`, dinero(c.saldo)) +
+    (c.fondo.activo ? filaDoble('Ahorrado en el fondo este período', dinero(c.fondo.ahorroPeriodo)) : '') + '</div></div>';
 }
 
 function ventanaDia(iso) {
@@ -1857,7 +1973,7 @@ function pantallaClaude() {
 
 /* ------------------------------ AJUSTES ------------------------------ */
 function pantallaAjustes(c) {
-  return [S.demo ? tarjetaDemo() : '', tarjetaPin(), tarjetaApariencia(), tarjetaRecordatorio(), tarjetaPeriodo(), tarjetaNuevoPeriodo(c), tarjetaCierreNocturno(), tarjetaNube(), tarjetaExcel(),
+  return [S.demo ? tarjetaDemo() : '', tarjetaPin(), tarjetaApariencia(), tarjetaRecordatorio(), tarjetaPeriodo(), tarjetaModoFondo(), tarjetaNuevoPeriodo(c), tarjetaCierreNocturno(), tarjetaNube(), tarjetaExcel(),
     tarjetaAcercaDe(),
     S.demo ? '' : tarjetaDemo(),
     S.demo ? '' : '<div class="card"><h2>Empezar de cero</h2><button class="sec" data-a="borrarTodo">Borrar todo</button></div>'].join('');
@@ -1915,10 +2031,22 @@ function tarjetaPeriodo() {
     '<div style="margin-top:12px"><button class="sec" data-a="verIntroduccion">Ver la introducción</button></div></div>';
 }
 
+function tarjetaModoFondo() {
+  const on = !!S.modoFondo, regla = S.fondoExceso || 'siguiente';
+  const opcion = (v, t) => `<option value="${v}"${(regla === 'aparte' ? 'aparte' : 'siguiente') === v ? ' selected' : ''}>${t}</option>`;
+  return '<div class="card"><h2>Fondo de ahorro</h2><div class="mut" style="margin-bottom:10px">Si lo activás, lo que no gastás cada día no pasa al día siguiente: se guarda solo en un fondo aparte. Cada día arranca con tu base por día. El fondo se ve en Hoy y se cuenta desde el inicio del período.</div>' +
+    `<div class="f"><input type="checkbox" data-f="modoFondo"${on ? ' checked' : ''}><span>Activar el fondo de ahorro</span></div>` +
+    (on ? '<label>Si me paso del límite de un día</label><select data-f="fondoExceso">' +
+      opcion('siguiente', 'Se descuenta del día siguiente') + opcion('aparte', 'No se descuenta de ningún lado') + '</select>' +
+      `<label>Fondo que ya tenías juntado de antes</label><input type="${campoDinero()}" data-f="fondoPrev" inputmode="decimal" value="${S.fondoPrev || ''}" placeholder="Monto">` : '') +
+    '</div>';
+}
+
 function tarjetaNuevoPeriodo(c) {
   return '<div class="card"><h2>Nuevo período</h2><div class="mut" style="margin-bottom:8px">Guarda el período actual en el historial y empieza de cero. Quedan los gastos importantes con 🔁 (los de monto variable, con el monto vacío), tus ingresos y las cuotas pasan a la siguiente.</div>' +
+    (c.fondo.activo ? '<div class="mut" style="margin-bottom:8px">Lo que ahorraste en el fondo queda guardado aparte y no se suma al saldo previo del período nuevo.</div>' : '') +
     '<label>Saldo previo en cuenta</label>' +
-    `<input id="np" inputmode="decimal" value="${Math.max(0, Math.round(c.saldo))}"><label>Día que cobrás (inicio)</label><input id="nd1" type="date" value="${S.end}">` +
+    `<input id="np" inputmode="decimal" value="${Math.max(0, Math.round(c.saldo - (c.fondo.activo ? c.fondo.ahorroPeriodo : 0)))}"><label>Día que cobrás (inicio)</label><input id="nd1" type="date" value="${S.end}">` +
     `<label>Próximo cobro (fin)</label><input id="nd2" type="date" value="${mesSiguiente(S.end)}"><div style="margin-top:10px"><button data-a="periodoNuevo">Empezar nuevo período</button></div></div>`;
 }
 
@@ -1980,6 +2108,7 @@ function ventanaResumen() {
   const fecha = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
   let texto = '💰 Mi plata · ' + fecha + '\nPresupuesto de hoy: ' + pesos(c.quedaHoy + c.gastoHoy) + '\nGasté hoy: ' + pesos(c.gastoHoy) + '\nMe queda para hoy: ' + pesos(c.quedaHoy);
   if (c.manana != null) texto += '\nMañana tendré: ' + pesos(c.manana);
+  if (c.fondo.activo) texto += '\n🏦 Mi fondo de ahorro: ' + pesos(c.fondo.total);
   texto += '\nDías hasta el próximo cobro: ' + c.faltan;
   metasDe().filter(m => m.t > 0).forEach(m => { texto += '\n🎯 ' + m.n + ': ' + Math.round(juntadoEnMeta(S, m) / m.t * 100) + '% juntado'; });
   texto += '\n\n“' + fraseDelDia(hoy) + '”';
@@ -2002,7 +2131,7 @@ function dibujar() {
   if (bloqueada || !S.bienvenida) document.body.classList.add('sin-degradado'); else document.body.classList.remove('sin-degradado');
   if (bloqueada) { nav.style.display = 'none'; fab.style.display = 'none'; principal.innerHTML = pantallaBloqueo(); return; }
   if (!S.bienvenida) { nav.style.display = 'none'; fab.style.display = 'none'; principal.innerHTML = pantallaBienvenida(); return; }
-  nav.style.display = ''; fab.style.display = UI.pestana === 'hoy' ? 'none' : '';
+  nav.style.display = ''; fab.style.display = '';
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === UI.pestana));
   const pantallas = { plan: pantallaPlan, hoy: pantallaHoy, dias: pantallaDias, claude: pantallaClaude, ajustes: pantallaAjustes };
   principal.innerHTML = (pantallas[UI.pestana] || pantallaHoy)(calcular(S, hoyISO())) +
@@ -2115,6 +2244,20 @@ const ACCIONES = {
   async quitarRecomposicion(el) {
     if (!(await confirmar('¿Quitar esta recomposición?'))) return SIN_GUARDAR;
     S.ajustes.splice(+el.dataset.i, 1);
+  },
+
+  /* --- fondo de ahorro --- */
+  usarFondo() { UI.usandoFondo = true; dibujar(); return SIN_GUARDAR; },
+  cancelarUsoFondo() { UI.usandoFondo = false; dibujar(); return SIN_GUARDAR; },
+  confirmarUsoFondo() {
+    const monto = aNumero(valorDe('fu'));
+    if (!monto) return SIN_GUARDAR;
+    (S.fondoUsos = S.fondoUsos || []).push({ id: Date.now(), date: hoyISO(), amt: monto, note: valorDe('fn').trim() });
+    UI.usandoFondo = false; aviso('Listo: sacaste ' + pesos(monto) + ' del fondo.');
+  },
+  async quitarUsoFondo(el) {
+    if (!(await confirmar('¿Quitar este retiro? El monto vuelve al fondo.'))) return SIN_GUARDAR;
+    S.fondoUsos.splice(+el.dataset.i, 1);
   },
 
   /* --- metas --- */
@@ -2267,6 +2410,9 @@ const CAMBIOS = {
   recHora:       v => { if (v) { S.recHora = v; if (S.recOn) programarRecordatorio(true); } },
   diasCopia:     v => { S.diasCopia = Math.max(0, Math.round(aNumero(v))); },
   previo:        v => { S.previo = aNumero(v); },
+  modoFondo:     (v, el) => { S.modoFondo = el.checked; UI.usandoFondo = false; },
+  fondoExceso:   v => { S.fondoExceso = ['siguiente', 'fondo', 'aparte'].includes(v) ? v : 'siguiente'; },
+  fondoPrev:     v => { S.fondoPrev = aNumero(v); },
   aviso:         v => { S.aviso = Math.min(100, Math.max(0, aNumero(v))); },
   inicio:        v => { if (v) S.start = v; },
   fin:           v => { if (v) S.end = v; },
