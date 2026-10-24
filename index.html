@@ -620,10 +620,18 @@ function calcular(S, hoy) {
        como siempre (lo que sobra pasa al día siguiente) y no aportan al fondo: así, al activarlo,
        lo que ya tenés hoy no cambia, y desde esta noche lo que no gastes del día va al fondo. */
     const iniFondo = S.fondoDesde ? Math.min(Math.max(numeroDeDia(S.fondoDesde) - numeroDeDia(S.start), 0), dias - 1) : 0;
+    /* Retiros del fondo marcados "para gastar" (para:'hoy'): suman al presupuesto del día en que se sacaron.
+       Si ese día no se gastan, al cierre vuelven solos al fondo (porque sobran). */
+    const extraRetiro = {};
+    (S.fondoUsos || []).forEach(x => {
+      if (x.para !== 'hoy') return;
+      const k = Math.min(Math.max(numeroDeDia(x.date) - numeroDeDia(S.start), 0), dias - 1);
+      extraRetiro[k] = (extraRetiro[k] || 0) + (+x.amt || 0);
+    });
     filas = []; let arrastre = 0;
     for (let i = 0; i < dias; i++) {
       if (recal && i === recal.day) arrastre = 0;
-      const sin = presupuestoDia(i);
+      const sin = presupuestoDia(i) + (extraRetiro[i] || 0);
       const presupuesto = i <= hoyIdx + 1 ? sin + arrastre : sin;
       const gasto = gastado(i, i);
       const sobra = presupuesto - gasto;
@@ -634,6 +642,7 @@ function calcular(S, hoy) {
     const cerrados = Math.min(dias, Math.max(0, numeroDeDia(hoy) - numeroDeDia(S.start)));
     const ahorroPeriodo = suma(filas.slice(0, cerrados), f => f.aporte);
     const usos = suma(S.fondoUsos || [], x => +x.amt || 0), previo = +S.fondoPrev || 0;
+    const usosParaGastar = suma((S.fondoUsos || []).filter(x => x.para === 'hoy'), x => +x.amt || 0);
     quedaHoyF = filas[hoyIdx].presupuesto - filas[hoyIdx].gasto;
     mananaF = hayManana ? presupuestoDia(hoyIdx + 1) + (regla === 'siguiente' ? Math.min(0, quedaHoyF) : 0) : null;
     fondo = {
@@ -641,7 +650,7 @@ function calcular(S, hoy) {
       total: previo + ahorroPeriodo - usos,
       acumulado: previo + (+S.fondoRetirado || 0) + ahorroPeriodo,     // lo ahorrado en total: nunca baja
       hoySuma: regla === 'fondo' ? quedaHoyF : Math.max(0, quedaHoyF),
-      disponible: saldoPeriodo - ahorroPeriodo,
+      disponible: saldoPeriodo - ahorroPeriodo + usosParaGastar,   // lo retirado para gastar pasa a disponible
     };
   }
 
@@ -852,7 +861,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.17';
+const VERSION_APP = '9.9.18';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1706,18 +1715,19 @@ function tarjetaFondo(c) {
   const retirado = f.acumulado - f.total;
   const detalle = [
     'Este período: <b>' + dinero(f.ahorroPeriodo) + '</b>',
-    f.acumulado - f.ahorroPeriodo ? 'De antes: <b>' + dinero(f.acumulado - f.ahorroPeriodo) + '</b>' : '',
-    retirado > 0 ? 'Retiraste: <b>' + dinero(retirado) + '</b> · Te quedan: <b>' + dinero(f.total) + '</b>' : '',
+    f.fondoPrev ? 'De antes: <b>' + dinero(f.fondoPrev) + '</b>' : '',
+    retirado > 0 ? 'Retiraste: <b>' + dinero(retirado) + '</b>' : '',
   ].filter(Boolean).join(' · ');
   const formulario = UI.usandoFondo
     ? '<div style="margin-top:10px;padding:12px;border:1px solid var(--ac);border-radius:10px"><label>¿Cuánto sacás del fondo?</label>' +
       `<input id="fu" inputmode="decimal" placeholder="Monto"><label>¿Para qué?</label><input id="fn" placeholder="Detalle (opcional)">` +
+      '<label>¿Qué hacés con esa plata?</label><select id="fp"><option value="hoy">La voy a gastar hoy (suma a mi límite de hoy)</option><option value="cubre">Cubre gastos que ya hice / cuadrar con el banco (no suma a hoy)</option></select>' +
       '<div class="f" style="margin:10px 0 0"><button class="sec" data-a="cancelarUsoFondo">Cancelar</button><button data-a="confirmarUsoFondo">Sacar</button></div></div>'
     : '<div class="f" style="margin-top:8px"><button class="sec" data-a="usarFondo">Usar del fondo</button></div>';
   const lista = usos.length
-    ? '<div style="margin-top:8px">' + usos.map((x, k) => `<div class="row"><span>${diaYMes(x.date)} ${escapar(x.note || 'Uso del fondo')}</span><span><b>${dinero(-x.amt)}</b><button class="x" data-a="quitarUsoFondo" data-i="${k}">✕</button></span></div>`).join('') + '</div>'
+    ? '<div style="margin-top:8px">' + usos.map((x, k) => `<div class="row"><span>${diaYMes(x.date)} ${escapar(x.note || 'Uso del fondo')}${x.para === 'hoy' ? ' (para hoy)' : ''}</span><span><b>${dinero(-x.amt)}</b><button class="x" data-a="quitarUsoFondo" data-i="${k}">✕</button></span></div>`).join('') + '</div>'
     : '';
-  return `<div class="card"><div class="mut">Mi fondo de ahorro ${botonOjo()}</div><div class="num">${dinero(f.acumulado)}</div>` +
+  return `<div class="card"><div class="mut">Mi fondo de ahorro ${botonOjo()}</div><div class="num">${dinero(f.total)}</div>` +
     `<div class="mut">${detalle}</div>` + lineaFondo(c) + formulario + lista + '</div>';
 }
 
@@ -2264,7 +2274,7 @@ const ACCIONES = {
   confirmarUsoFondo() {
     const monto = aNumero(valorDe('fu'));
     if (!monto) return SIN_GUARDAR;
-    (S.fondoUsos = S.fondoUsos || []).push({ id: Date.now(), date: hoyISO(), amt: monto, note: valorDe('fn').trim() });
+    (S.fondoUsos = S.fondoUsos || []).push({ id: Date.now(), date: hoyISO(), amt: monto, note: valorDe('fn').trim(), para: valorDe('fp') === 'cubre' ? 'cubre' : 'hoy' });
     UI.usandoFondo = false; aviso('Listo: sacaste ' + pesos(monto) + ' del fondo.');
   },
   async quitarUsoFondo(el) {
