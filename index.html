@@ -801,7 +801,10 @@ function iniciarPeriodo(S, hoy, { sueldo, previo, inicio, fin }) {
   /* Gastos fijos: los que no tienen el tilde de repetir se sacan (salvo los que están en cuotas);
      los marcados con "el monto cambia" quedan con el monto vacío. Los gastos de versiones viejas se mantienen. */
   S.items = S.items.filter(i => tieneCuotas(i) || i.f !== false);
-  S.items.forEach(i => { i.p = false; delete i.d; delete i.x; if (i.v && !tieneCuotas(i)) i.a = 0; });
+  S.items.forEach(i => { i.p = false; delete i.d; delete i.x;
+    if (i.prox != null && i.prox !== '') i.a = +i.prox || 0;          // el monto que ya cargaste para el período nuevo
+    else if (i.v && !tieneCuotas(i)) i.a = 0;
+    delete i.prox; });
   /* Gastos anotados por adelantado: pasan a ser gastos del período nuevo */
   (S.proximos || []).filter(x => x.n || x.a).forEach(x => S.items.push({ n: x.n || '', a: +x.a || 0, p: false, f: false, v: false }));
   S.proximos = [];
@@ -913,7 +916,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.25';
+const VERSION_APP = '9.9.26';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1941,20 +1944,26 @@ function tarjetaGastosImportantes() {
 /* Gastos del próximo período: se anotan ahora pero NO descuentan nada de este; al empezar el período nuevo pasan a "Pagar al cobrar" */
 /* Gastos de este período que pasan solos al siguiente: los marcados con 🔁 y las cuotas que todavía no terminaron */
 function gastosQueSeRepiten(S) {
-  return S.items.filter(i => (i.n || i.a) && (tieneCuotas(i) ? i.q.actual < i.q.total : i.f !== false))
-    .map(i => ({ n: i.n || 'Sin nombre', a: (i.v && !tieneCuotas(i)) ? null : montoDe(i),
-      cuota: tieneCuotas(i) ? (i.q.actual + 1) + '/' + i.q.total : '' }));
+  return S.items.map((i, k) => ({ i, k }))
+    .filter(({ i }) => (i.n || i.a) && (tieneCuotas(i) ? i.q.actual < i.q.total : i.f !== false))
+    .map(({ i, k }) => {
+      const variable = !!i.v && !tieneCuotas(i);
+      const prox = (i.prox != null && i.prox !== '') ? +i.prox : null;   // monto cargado para el período que viene
+      return { k, n: i.n || 'Sin nombre', variable, prox, a: prox != null ? prox : (variable ? null : montoDe(i)),
+        cuota: tieneCuotas(i) ? (i.q.actual + 1) + '/' + i.q.total : '' };
+    });
 }
 
 function tarjetaProximos() {
   const l = S.proximos || [], rep = gastosQueSeRepiten(S);
   const repHtml = rep.length ? '<div class="mut" style="margin:6px 0 4px">🔁 Se repiten solos</div>' +
-    rep.map(x => filaDoble(escapar(x.n) + (x.cuota ? ' · cuota ' + x.cuota : ''), x.a === null ? 'monto a definir' : pesos(x.a))).join('') : '';
+    rep.map(x => `<div class="f" style="align-items:center"><span style="flex:1;min-width:0">${escapar(x.n)}${x.cuota ? ' · cuota ' + x.cuota : ''}</span>` +
+      `<input data-f="itemProx" data-k="${x.k}" inputmode="decimal" value="${x.prox != null ? x.prox : (x.variable ? '' : x.a)}" placeholder="Monto a definir" style="max-width:130px;text-align:right"></div>`).join('') : '';
   const lista = l.map((x, k) =>
     `<div class="f"><input data-f="proxNombre" data-k="${k}" value="${escapar(x.n)}" placeholder="Nombre">` +
     `<input data-f="proxMonto" data-k="${k}" inputmode="decimal" value="${x.a || ''}" placeholder="Monto" style="max-width:110px">` +
     `<button class="x" data-a="quitarProximo" data-i="${k}">✕</button></div>`).join('');
-  return '<div class="card"><h2>🗓️ Para el próximo período</h2><div class="mut" style="margin-bottom:8px">Acá ves lo que ya tenés comprometido para cuando cobres. Los marcados con 🔁 aparecen solos; los demás los anotás vos. No descuentan nada de este período.</div>' + repHtml +
+  return '<div class="card"><h2>🗓️ Para el próximo período</h2><div class="mut" style="margin-bottom:8px">Acá ves lo que ya tenés comprometido para cuando cobres. Los marcados con 🔁 aparecen solos y, cuando te llegue el importe (por ejemplo el de Telecom), lo escribís en su cuadrito. Los demás los anotás vos. No descuentan nada de este período.</div>' + repHtml +
     (l.length ? '<div class="mut" style="margin:10px 0 4px">✍️ Anotados por vos</div>' : '') + lista +
     `<div style="margin:8px 0">${filaDoble('Ya reservado para el próximo', pesos(suma(rep, x => x.a || 0) + suma(l, x => +x.a || 0)))}</div>` +
     '<button class="sec" data-a="agregarProximo">Agregar gasto del próximo período</button></div>';
@@ -2554,6 +2563,7 @@ const CAMBIOS = {
   itemNombre:    (v, el, k) => { S.items[k].n = v; },
   proxNombre:    (v, el, k) => { S.proximos[k].n = v; },
   proxMonto:     (v, el, k) => { S.proximos[k].a = aNumero(v); },
+  itemProx:      (v, el, k) => { if (String(v).trim() === '') delete S.items[k].prox; else S.items[k].prox = aNumero(v); },
   itemMonto:     (v, el, k) => {
     /* Con el período ya empezado, lo nuevo (un monto recién cargado o un aumento) se descuenta
        desde hoy, repartido entre los días que faltan; lo que ya estaba no se toca. */
