@@ -643,11 +643,30 @@ function calcular(S, hoy) {
     const ahorroPeriodo = suma(filas.slice(0, cerrados), f => f.aporte);
     const usos = suma(S.fondoUsos || [], x => +x.amt || 0), previo = +S.fondoPrev || 0;
     const usosParaGastar = suma((S.fondoUsos || []).filter(x => x.para !== 'cubre'), x => +x.amt || 0);
+    /* Rendimiento estimado (Mercado Pago): la tasa anual se pasa a diaria y se suma al cierre de cada día
+       sobre el fondo + lo ya rendido (interés compuesto). Es solo una estimación y no toca tu plata disponible. */
+    const tasaRend = Math.min(300, Math.max(0, +S.rendTasa || 0));
+    const rendActivo = !!S.rendOn && tasaRend > 0 && !!S.rendDesde;
+    const rendPrev = rendActivo ? (+S.rendPrev || 0) : 0;
+    let rendPer = 0;
+    if (rendActivo) {
+      const r = tasaRend / 100 / 365;
+      const k0 = Math.max(0, numeroDeDia(S.rendDesde) - numeroDeDia(S.start));
+      const idxUso = x => Math.min(Math.max(numeroDeDia(x.date) - numeroDeDia(S.start), 0), dias - 1);
+      let acum = 0;
+      for (let k = 0; k < cerrados; k++) {
+        if (k > 0) acum += filas[k - 1].aporte;
+        if (k < k0) continue;
+        const usado = suma((S.fondoUsos || []).filter(x => idxUso(x) <= k), x => +x.amt || 0);
+        rendPer += Math.max(0, previo + acum - usado + rendPrev + rendPer) * r;
+      }
+    }
     quedaHoyF = filas[hoyIdx].presupuesto - filas[hoyIdx].gasto;
     mananaF = hayManana ? presupuestoDia(hoyIdx + 1) + (regla === 'siguiente' ? Math.min(0, quedaHoyF) : 0) : null;
     fondo = {
       activo: true, regla, fondoPrev: previo, ahorroPeriodo, usos,
       total: previo + ahorroPeriodo - usos,
+      rend: rendPrev + rendPer, totalConRend: previo + ahorroPeriodo - usos + rendPrev + rendPer, rendEnMP: !!S.rendEnMP,
       acumulado: previo + (+S.fondoRetirado || 0) + ahorroPeriodo,     // lo ahorrado en total: nunca baja
       hoySuma: regla === 'fondo' ? quedaHoyF : Math.max(0, quedaHoyF),
       disponible: saldoPeriodo - ahorroPeriodo + usosParaGastar,   // lo retirado para gastar pasa a disponible
@@ -706,7 +725,7 @@ function conciliar(S, c) {
   return {
     hayCuentas: cuentas.some(x => (+x.m || 0) > 0),
     total,
-    diferencia: total - c.saldo - apartadoEnMetas - (c.fondo.activo ? c.fondo.fondoPrev - c.fondo.usos : 0),
+    diferencia: total - c.saldo - apartadoEnMetas - (c.fondo.activo ? c.fondo.fondoPrev - c.fondo.usos + (c.fondo.rendEnMP ? c.fondo.rend : 0) : 0),
   };
 }
 
@@ -748,7 +767,8 @@ function iniciarPeriodo(S, hoy, { sueldo, previo, inicio, fin }) {
     ahorro: c.fondo.activo ? redondear2(c.fondo.ahorroPeriodo) : undefined,
   }]);
   /* modo fondo: lo ahorrado queda guardado aparte y no entra en el presupuesto del período nuevo */
-  if (c.fondo.activo) { S.fondoPrev = redondear2(c.fondo.total); S.fondoRetirado = redondear2((+S.fondoRetirado || 0) + c.fondo.usos); S.fondoUsos = []; }
+  if (c.fondo.activo) { S.fondoPrev = redondear2(c.fondo.total); S.fondoRetirado = redondear2((+S.fondoRetirado || 0) + c.fondo.usos); S.fondoUsos = [];
+    if (S.rendOn) { S.rendPrev = redondear2(c.fondo.rend); S.rendDesde = inicio; } }
   const terminadas = avanzarCuotas(S);
   /* Gastos fijos: los que no tienen el tilde de repetir se sacan (salvo los que están en cuotas);
      los marcados con "el monto cambia" quedan con el monto vacío. Los gastos de versiones viejas se mantienen. */
@@ -864,7 +884,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.21';
+const VERSION_APP = '9.9.22';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -918,7 +938,7 @@ function datosExportar(S, hoy) {
     ['Saldo', c.saldo, true],
   ];
   if (o) resumen.push(['Objetivo por día', o.obj, true], ['Te sobra si lo cumplís', o.proyectado, true]);
-  if (c.fondo.activo) resumen.push(['Ahorrado en el período', c.fondo.ahorroPeriodo, true], ['Fondo de ahorro total', c.fondo.total, true]);
+  if (c.fondo.activo) resumen.push(['Ahorrado en el período', c.fondo.ahorroPeriodo, true], ['Fondo de ahorro total', c.fondo.totalConRend, true]);
   return {
     hoy, fecha, resumen,
     dias: dias.map(x => ({ fecha: fecha(x.iso), dia: x.dia, presupuesto: x.presupuesto, gasto: x.gasto, sobra: x.sobra,
@@ -1730,8 +1750,9 @@ function tarjetaFondo(c) {
   const lista = usos.length
     ? '<div style="margin-top:8px">' + usos.map((x, k) => `<div class="row"><span>${diaYMes(x.date)} ${escapar(x.note || 'Uso del fondo')}${x.para !== 'cubre' ? ' (para hoy)' : ''}</span><span><b>${dinero(-x.amt)}</b><button class="x" data-a="quitarUsoFondo" data-i="${k}">✕</button></span></div>`).join('') + '</div>'
     : '';
-  return `<div class="card"><div class="mut">Mi fondo de ahorro ${botonOjo()}</div><div class="num">${dinero(f.total)}</div>` +
-    `<div class="mut">${detalle}</div>` + lineaFondo(c) + formulario + lista + '</div>';
+  return `<div class="card"><div class="mut">Mi fondo de ahorro ${botonOjo()}</div><div class="num">${dinero(f.totalConRend)}</div>` +
+    `<div class="mut">${detalle}</div>` +
+    (f.rend > 0.005 ? `<div class="mut" style="margin-top:4px">Incluye rendimiento estimado: <b>${dinero(f.rend)}</b></div>` : '') + lineaFondo(c) + formulario + lista + '</div>';
 }
 
 function tarjetaSaldo(c) {
@@ -1764,8 +1785,8 @@ function tarjetaCuentas(c) {
     : '';
   const resumenFondo = c.fondo.activo
     ? '<div style="margin:8px 0">' + filaDoble('Disponible para gastar', dinero(c.fondo.disponible)) +
-      filaDoble('Fondo de ahorro', dinero(c.fondo.total)) +
-      filaDoble('Total (lo que tendrías en cuentas)', dinero(c.fondo.disponible + c.fondo.total)) + '</div>'
+      filaDoble('Fondo de ahorro', dinero(c.fondo.total + (c.fondo.rendEnMP ? c.fondo.rend : 0))) +
+      filaDoble('Total (lo que tendrías en cuentas)', dinero(c.fondo.disponible + c.fondo.total + (c.fondo.rendEnMP ? c.fondo.rend : 0))) + '</div>'
     : '';
   return '<div class="card"><h2>Mis cuentas</h2>' + filas + resumenFondo + comparacion +
     '<div class="f" style="margin-top:8px;flex-wrap:wrap"><button class="sec" data-a="agregarCuenta">Agregar cuenta</button>' +
@@ -2087,6 +2108,18 @@ function tarjetaModoFondo() {
     (on ? '<label>Si me paso del límite de un día</label><select data-f="fondoExceso">' +
       opcion('siguiente', 'Se descuenta del día siguiente') + opcion('aparte', 'No se descuenta de ningún lado') + '</select>' +
       `<label>Fondo que ya tenías juntado de antes</label><input type="${campoDinero()}" data-f="fondoPrev" inputmode="decimal" value="${S.fondoPrev || ''}" placeholder="Monto">` : '') +
+    (on ? tarjetaRendimiento() : '') +
+    '</div>';
+}
+function tarjetaRendimiento() {
+  const rOn = !!S.rendOn;
+  return '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd, rgba(128,128,128,.25))"><div style="font-weight:700">Rendimiento de Mercado Pago</div>' +
+    '<div class="mut" style="margin:4px 0 8px">Tu fondo va sumando solo lo que rendiría con la tasa que pongas. Es una estimación: lo que manda es lo que ves en Mercado Pago.</div>' +
+    `<div class="f"><input type="checkbox" data-f="rendOn"${rOn ? ' checked' : ''}><span>Sumar rendimiento a mi fondo</span></div>` +
+    (rOn ? '<label>Tasa anual (TNA) en %</label>' +
+      `<input inputmode="decimal" data-f="rendTasa" value="${String(S.rendTasa || '').replace('.', ',')}" placeholder="Ej: 19">` +
+      `<div class="f" style="margin-top:8px"><input type="checkbox" data-f="rendEnMP"${S.rendEnMP ? ' checked' : ''}><span>Mi fondo ya está en Mercado Pago</span></div>` +
+      '<div class="mut" style="margin-top:4px">Si lo marcás, el rendimiento también cuenta al comparar con tus cuentas.</div>' : '') +
     '</div>';
 }
 
@@ -2156,7 +2189,7 @@ function ventanaResumen() {
   const fecha = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
   let texto = '💰 Mi plata · ' + fecha + '\nPresupuesto de hoy: ' + pesos(c.quedaHoy + c.gastoHoy) + '\nGasté hoy: ' + pesos(c.gastoHoy) + '\nMe queda para hoy: ' + pesos(c.quedaHoy);
   if (c.manana != null) texto += '\nMañana tendré: ' + pesos(c.manana);
-  if (c.fondo.activo) texto += '\n🏦 Mi fondo de ahorro: ' + pesos(c.fondo.total);
+  if (c.fondo.activo) texto += '\n🏦 Mi fondo de ahorro: ' + pesos(c.fondo.totalConRend);
   texto += '\nDías hasta el próximo cobro: ' + c.faltan;
   metasDe().filter(m => m.t > 0).forEach(m => { texto += '\n🎯 ' + m.n + ': ' + Math.round(juntadoEnMeta(S, m) / m.t * 100) + '% juntado'; });
   texto += '\n\n“' + fraseDelDia(hoy) + '”';
@@ -2464,6 +2497,9 @@ const CAMBIOS = {
   modoFondo:     (v, el) => { S.modoFondo = el.checked; if (el.checked) S.fondoDesde = hoyISO(); UI.usandoFondo = false; },
   fondoExceso:   v => { S.fondoExceso = ['siguiente', 'fondo', 'aparte'].includes(v) ? v : 'siguiente'; },
   fondoPrev:     v => { S.fondoPrev = aNumero(v); },
+  rendOn:        (v, el) => { S.rendOn = el.checked; if (el.checked) { S.rendDesde = hoyISO(); S.rendPrev = 0; if (!S.rendTasa) S.rendTasa = 19; } },
+  rendTasa:      v => { S.rendTasa = Math.min(300, Math.max(0, +String(v).replace(',', '.').replace(/[^\d.]/g, '') || 0)); },
+  rendEnMP:      (v, el) => { S.rendEnMP = el.checked; },
   aviso:         v => { S.aviso = Math.min(100, Math.max(0, aNumero(v))); },
   inicio:        v => { if (v) S.start = v; },
   fin:           v => { if (v) S.end = v; },
