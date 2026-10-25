@@ -582,7 +582,7 @@ function calcular(S, hoy) {
     S.items.reduce((l, i) => l.concat(aumentosDe(i).map(x => ({ amt: -(+x.amt || 0), desde: x.desde }))), []));
   const aportes      = suma(S.spent.filter(e => e.meta), e => e.amt);
   const dispBase     = (+S.sueldo || 0) + (+S.previo || 0) - totalBase - aportes;
-  const disp         = dispBase + suma(descuentos, x => x.amt);
+  let disp           = dispBase + suma(descuentos, x => x.amt);
 
   const dias    = Math.max(1, numeroDeDia(S.end) - numeroDeDia(S.start));
   const hoyIdx  = Math.min(Math.max(numeroDeDia(hoy) - numeroDeDia(S.start), 0), dias - 1);
@@ -602,11 +602,27 @@ function calcular(S, hoy) {
     suma(S.spent.filter(e => !e.meta && idxDe(e) >= a && idxDe(e) <= b), e => e.amt);
   const gastoHoy  = gastado(hoyIdx, hoyIdx);
 
+  /* Rendimiento estimado del dinero disponible (Mercado Pago): cada día cerrado rinde (tasa anual / 365) sobre lo que
+     tenías disponible al empezar ese día. Se suma al disponible como una recomposición a favor y se reparte entre los
+     días que faltan (desde el día siguiente). Es una estimación sobre el número de la app. */
+  const tasaD = Math.min(300, Math.max(0, +S.rendTasa || 0));
+  const rendDispActivo = !!S.rendDispOn && tasaD > 0 && !!S.rendDispDesde;
+  const rD = tasaD / 100 / 365;
+  const kD0 = rendDispActivo ? Math.max(0, numeroDeDia(S.rendDispDesde) - numeroDeDia(S.start)) : 0;
+  let rendDisp = 0;
+  const sumarRendDisp = (k, aportesPrevios, usosHasta) => {
+    if (!rendDispActivo || k < kD0) return;
+    const y = Math.max(0, disp - gastado(-1e9, k - 1) - aportesPrevios + usosHasta) * rD;
+    descuentos.push({ amt: y, desde: isoDeNumero(numeroDeDia(S.start) + k + 1) });
+    disp += y; rendDisp += y;
+  };
+  if (!S.modoFondo) for (let k = 0; k < hoyIdx; k++) sumarRendDisp(k, 0, 0);
+
   let acumulado = 0;
   for (let i = desde; i <= hoyIdx; i++) acumulado += presupuestoDia(i);
   const quedaHoy = acumulado - gastado(desde, hoyIdx);
   const hayManana = hoyIdx < dias - 1;
-  const saldoPeriodo = disp - suma(S.spent.filter(e => !e.meta), e => e.amt);
+  let saldoPeriodo   = disp - suma(S.spent.filter(e => !e.meta), e => e.amt);
 
   /* MODO FONDO: lo que no se gasta de cada día NO pasa al día siguiente: va a un fondo aparte.
      Cada día arranca con su base. Si te pasás, depende de S.fondoExceso:
@@ -628,7 +644,9 @@ function calcular(S, hoy) {
       const k = Math.min(Math.max(numeroDeDia(x.date) - numeroDeDia(S.start), 0), dias - 1);
       extraRetiro[k] = (extraRetiro[k] || 0) + (+x.amt || 0);
     });
-    filas = []; let arrastre = 0;
+    const usosHastaDia = i => suma((S.fondoUsos || []).filter(x => x.para !== 'cubre' &&
+      Math.min(Math.max(numeroDeDia(x.date) - numeroDeDia(S.start), 0), dias - 1) <= i), x => +x.amt || 0);
+    filas = []; let arrastre = 0, aportesAcum = 0;
     for (let i = 0; i < dias; i++) {
       if (recal && i === recal.day) arrastre = 0;
       const sin = presupuestoDia(i) + (extraRetiro[i] || 0);
@@ -638,7 +656,10 @@ function calcular(S, hoy) {
       const previo = i < iniFondo;
       filas.push({ i, presupuesto, gasto, sobra, aporte: previo ? 0 : (regla === 'fondo' ? sobra : Math.max(0, sobra)) });
       arrastre = previo ? sobra : (regla === 'siguiente' ? Math.min(0, sobra) : 0);
+      if (i < hoyIdx) sumarRendDisp(i, aportesAcum, usosHastaDia(i));
+      aportesAcum += filas[i].aporte;
     }
+    saldoPeriodo = disp - suma(S.spent.filter(e => !e.meta), e => e.amt);
     const cerrados = Math.min(dias, Math.max(0, numeroDeDia(hoy) - numeroDeDia(S.start)));
     const ahorroPeriodo = suma(filas.slice(0, cerrados), f => f.aporte);
     const usos = suma(S.fondoUsos || [], x => +x.amt || 0), previo = +S.fondoPrev || 0;
@@ -674,7 +695,7 @@ function calcular(S, hoy) {
   }
 
   return {
-    total, porPagar, disp, dias, hoyIdx, base, recal, extra, presupuestoDia,
+    total, porPagar, disp, dias, hoyIdx, base, recal, extra, presupuestoDia, rendDisp,
     baseHoy: presupuestoDia(hoyIdx),
     baseManana: hayManana ? presupuestoDia(hoyIdx + 1) : null,
     manana: modoFondo ? mananaF : (hayManana ? presupuestoDia(hoyIdx + 1) + quedaHoy : null),
@@ -778,6 +799,7 @@ function iniciarPeriodo(S, hoy, { sueldo, previo, inicio, fin }) {
   (S.proximos || []).filter(x => x.n || x.a).forEach(x => S.items.push({ n: x.n || '', a: +x.a || 0, p: false, f: false, v: false }));
   S.proximos = [];
   S.fondoDesde = '';
+  if (S.rendDispOn) S.rendDispDesde = inicio;
   S.cierres = {}; S.ajustes = []; S.spent = []; S.recal = null;
   if (sueldo !== undefined) { S.sueldo = sueldo; S.ingresos = [{ cat: 'Sueldo', a: sueldo }]; }
   S.previo = previo; S.start = inicio; S.end = fin;
@@ -884,7 +906,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.22';
+const VERSION_APP = '9.9.23';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1759,6 +1781,7 @@ function tarjetaSaldo(c) {
   const cambia = c.baseManana != null && Math.abs(c.baseManana - c.baseHoy) >= 1;
   return '<div class="card">' +
     filaDoble(`Saldo del período ${botonOjo()}`, dinero(c.saldo)) +
+    (c.rendDisp > 0.005 ? filaDoble('Incluye rendimiento estimado', dinero(c.rendDisp)) : '') +
     filaDoble('Días que faltan (con hoy)', c.faltan) +
     filaDoble(`Base por día${c.recal ? ' (recalibrada)' : ''}`, pesos(c.baseHoy)) +
     (cambia ? filaDoble('Base por día desde mañana', pesos(c.baseManana)) : '') + '</div>';
@@ -2042,7 +2065,7 @@ function pantallaClaude() {
 
 /* ------------------------------ AJUSTES ------------------------------ */
 function pantallaAjustes(c) {
-  return [S.demo ? tarjetaDemo() : '', tarjetaPin(), tarjetaApariencia(), tarjetaRecordatorio(), tarjetaPeriodo(), tarjetaModoFondo(), tarjetaNuevoPeriodo(c), tarjetaCierreNocturno(), tarjetaNube(), tarjetaExcel(),
+  return [S.demo ? tarjetaDemo() : '', tarjetaPin(), tarjetaApariencia(), tarjetaRecordatorio(), tarjetaPeriodo(), tarjetaModoFondo(), tarjetaRendimiento(), tarjetaNuevoPeriodo(c), tarjetaCierreNocturno(), tarjetaNube(), tarjetaExcel(),
     tarjetaAcercaDe(),
     S.demo ? '' : tarjetaDemo(),
     S.demo ? '' : '<div class="card"><h2>Empezar de cero</h2><button class="sec" data-a="borrarTodo">Borrar todo</button></div>'].join('');
@@ -2108,18 +2131,18 @@ function tarjetaModoFondo() {
     (on ? '<label>Si me paso del límite de un día</label><select data-f="fondoExceso">' +
       opcion('siguiente', 'Se descuenta del día siguiente') + opcion('aparte', 'No se descuenta de ningún lado') + '</select>' +
       `<label>Fondo que ya tenías juntado de antes</label><input type="${campoDinero()}" data-f="fondoPrev" inputmode="decimal" value="${S.fondoPrev || ''}" placeholder="Monto">` : '') +
-    (on ? tarjetaRendimiento() : '') +
     '</div>';
 }
 function tarjetaRendimiento() {
-  const rOn = !!S.rendOn;
-  return '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--bd, rgba(128,128,128,.25))"><div style="font-weight:700">Rendimiento de Mercado Pago</div>' +
-    '<div class="mut" style="margin:4px 0 8px">Tu fondo va sumando solo lo que rendiría con la tasa que pongas. Es una estimación: lo que manda es lo que ves en Mercado Pago.</div>' +
-    `<div class="f"><input type="checkbox" data-f="rendOn"${rOn ? ' checked' : ''}><span>Sumar rendimiento a mi fondo</span></div>` +
-    (rOn ? '<label>Tasa anual (TNA) en %</label>' +
-      `<input inputmode="decimal" data-f="rendTasa" value="${String(S.rendTasa || '').replace('.', ',')}" placeholder="Ej: 19">` +
-      `<div class="f" style="margin-top:8px"><input type="checkbox" data-f="rendEnMP"${S.rendEnMP ? ' checked' : ''}><span>Mi fondo ya está en Mercado Pago</span></div>` +
-      '<div class="mut" style="margin-top:4px">Si lo marcás, el rendimiento también cuenta al comparar con tus cuentas.</div>' : '') +
+  const hay = !!(S.rendOn || S.rendDispOn);
+  return '<div class="card"><h2>Rendimiento de Mercado Pago</h2>' +
+    '<div class="mut" style="margin-bottom:8px">Tu plata va sumando sola lo que rendiría con la tasa que pongas. Es una estimación: lo que manda es lo que ves en Mercado Pago. Activalo cuando tu plata esté en Mercado Pago.</div>' +
+    `<div class="f"><input type="checkbox" data-f="rendDispOn"${S.rendDispOn ? ' checked' : ''}><span>Sumar rendimiento a mi dinero disponible</span></div>` +
+    (S.modoFondo ? `<div class="f"><input type="checkbox" data-f="rendOn"${S.rendOn ? ' checked' : ''}><span>Sumar rendimiento a mi fondo de ahorro</span></div>` : '') +
+    (hay ? '<label>Tasa anual (TNA) en %</label>' +
+      `<input inputmode="decimal" data-f="rendTasa" value="${String(S.rendTasa || '').replace('.', ',')}" placeholder="Ej: 19">` : '') +
+    (S.rendOn && S.modoFondo ? `<div class="f" style="margin-top:8px"><input type="checkbox" data-f="rendEnMP"${S.rendEnMP ? ' checked' : ''}><span>Mi fondo ya está en Mercado Pago</span></div>` +
+      '<div class="mut" style="margin-top:4px">Si lo marcás, el rendimiento del fondo también cuenta al comparar con tus cuentas.</div>' : '') +
     '</div>';
 }
 
@@ -2500,6 +2523,7 @@ const CAMBIOS = {
   rendOn:        (v, el) => { S.rendOn = el.checked; if (el.checked) { S.rendDesde = hoyISO(); S.rendPrev = 0; if (!S.rendTasa) S.rendTasa = 19; } },
   rendTasa:      v => { S.rendTasa = Math.min(300, Math.max(0, +String(v).replace(',', '.').replace(/[^\d.]/g, '') || 0)); },
   rendEnMP:      (v, el) => { S.rendEnMP = el.checked; },
+  rendDispOn:    (v, el) => { S.rendDispOn = el.checked; if (el.checked) { S.rendDispDesde = hoyISO(); if (!S.rendTasa) S.rendTasa = 19; } },
   aviso:         v => { S.aviso = Math.min(100, Math.max(0, aNumero(v))); },
   inicio:        v => { if (v) S.start = v; },
   fin:           v => { if (v) S.end = v; },
