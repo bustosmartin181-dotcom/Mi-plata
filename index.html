@@ -500,6 +500,8 @@ function numeroDeDia(iso) {
   return Date.UTC(a, m - 1, d) / MS_DIA;
 }
 const isoDeNumero = n => new Date(n * MS_DIA).toISOString().slice(0, 10);
+/* Mercado Pago acredita el rendimiento por la mañana de cada día hábil (lunes a viernes); lo de fin de semana llega junto el lunes. No contempla feriados. */
+const esHabil = n => { const d = new Date(n * MS_DIA).getUTCDay(); return d >= 1 && d <= 5; };
 function hoyISO() {
   const d = new Date();
   return d.getFullYear() + '-' + dosDigitos(d.getMonth() + 1) + '-' + dosDigitos(d.getDate());
@@ -609,12 +611,15 @@ function calcular(S, hoy) {
   const rendDispActivo = !!S.rendDispOn && tasaD > 0 && !!S.rendDispDesde;
   const rD = tasaD / 100 / 365;
   const kD0 = rendDispActivo ? Math.max(0, numeroDeDia(S.rendDispDesde) - numeroDeDia(S.start)) : 0;
-  let rendDisp = 0;
+  let rendDisp = 0, pendD = 0;
   const sumarRendDisp = (k, aportesPrevios, usosHasta) => {
     if (!rendDispActivo || k < kD0) return;
     const y = Math.max(0, disp - gastado(-1e9, k - 1) - aportesPrevios + usosHasta) * rD;
-    descuentos.push({ amt: y, desde: isoDeNumero(numeroDeDia(S.start) + k + 1) });
-    disp += y; rendDisp += y;
+    pendD += y;
+    if (esHabil(numeroDeDia(S.start) + k + 1)) {
+      descuentos.push({ amt: pendD, desde: isoDeNumero(numeroDeDia(S.start) + k + 1) });
+      disp += pendD; rendDisp += pendD; pendD = 0;
+    }
   };
   if (!S.modoFondo) for (let k = 0; k < hoyIdx; k++) sumarRendDisp(k, 0, 0);
 
@@ -669,25 +674,27 @@ function calcular(S, hoy) {
     const tasaRend = Math.min(300, Math.max(0, +S.rendTasa || 0));
     const rendActivo = !!S.rendOn && tasaRend > 0 && !!S.rendDesde;
     const rendPrev = rendActivo ? (+S.rendPrev || 0) : 0;
-    let rendPer = 0;
+    let rendPer = 0, rendPend = 0;
     if (rendActivo) {
       const r = tasaRend / 100 / 365;
       const k0 = Math.max(0, numeroDeDia(S.rendDesde) - numeroDeDia(S.start));
       const idxUso = x => Math.min(Math.max(numeroDeDia(x.date) - numeroDeDia(S.start), 0), dias - 1);
-      let acum = 0;
+      let acum = 0, pend = 0;
       for (let k = 0; k < cerrados; k++) {
         if (k > 0) acum += filas[k - 1].aporte;
         if (k < k0) continue;
         const usado = suma((S.fondoUsos || []).filter(x => idxUso(x) <= k), x => +x.amt || 0);
-        rendPer += Math.max(0, previo + acum - usado + rendPrev + rendPer) * r;
+        pend += Math.max(0, previo + acum - usado + rendPrev + rendPer) * r;
+        if (esHabil(numeroDeDia(S.start) + k + 1)) { rendPer += pend; pend = 0; }
       }
+      rendPend = pend;
     }
     quedaHoyF = filas[hoyIdx].presupuesto - filas[hoyIdx].gasto;
     mananaF = hayManana ? presupuestoDia(hoyIdx + 1) + (regla === 'siguiente' ? Math.min(0, quedaHoyF) : 0) : null;
     fondo = {
       activo: true, regla, fondoPrev: previo, ahorroPeriodo, usos,
       total: previo + ahorroPeriodo - usos,
-      rend: rendPrev + rendPer, totalConRend: previo + ahorroPeriodo - usos + rendPrev + rendPer, rendEnMP: !!S.rendEnMP,
+      rend: rendPrev + rendPer, rendPend, totalConRend: previo + ahorroPeriodo - usos + rendPrev + rendPer, rendEnMP: !!S.rendEnMP,
       acumulado: previo + (+S.fondoRetirado || 0) + ahorroPeriodo,     // lo ahorrado en total: nunca baja
       hoySuma: regla === 'fondo' ? quedaHoyF : Math.max(0, quedaHoyF),
       disponible: saldoPeriodo - ahorroPeriodo + usosParaGastar,   // lo retirado para gastar pasa a disponible
@@ -789,7 +796,7 @@ function iniciarPeriodo(S, hoy, { sueldo, previo, inicio, fin }) {
   }]);
   /* modo fondo: lo ahorrado queda guardado aparte y no entra en el presupuesto del período nuevo */
   if (c.fondo.activo) { S.fondoPrev = redondear2(c.fondo.total); S.fondoRetirado = redondear2((+S.fondoRetirado || 0) + c.fondo.usos); S.fondoUsos = [];
-    if (S.rendOn) { S.rendPrev = redondear2(c.fondo.rend); S.rendDesde = inicio; } }
+    if (S.rendOn) { S.rendPrev = redondear2(c.fondo.rend + (c.fondo.rendPend || 0)); S.rendDesde = inicio; } }
   const terminadas = avanzarCuotas(S);
   /* Gastos fijos: los que no tienen el tilde de repetir se sacan (salvo los que están en cuotas);
      los marcados con "el monto cambia" quedan con el monto vacío. Los gastos de versiones viejas se mantienen. */
@@ -906,7 +913,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.23';
+const VERSION_APP = '9.9.25';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1743,8 +1750,16 @@ function lineaFondo(c) {
   return `<svg class="grafico" viewBox="0 0 ${W} ${H}" style="margin-top:8px"><polyline points="${p}" fill="none" stroke="var(--ok)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
 
+/* Etiqueta chica y discreta con la tasa, como la de Mercado Pago ("↑ Rinde 19%"). Es solo la tasa que cargaste vos en Ajustes. */
+function etiquetaRinde(activo) {
+  const t = Math.min(300, Math.max(0, +S.rendTasa || 0));
+  if (!activo || !t) return '';
+  return `<div style="color:var(--ok);font-size:0.8125rem;font-weight:600;margin:2px 0 6px">↑ Rinde ${String(t).replace('.', ',')}%</div>`;
+}
+
 function tarjetaQuedaHoy(c, clase, mensaje, presupuesto, porcentaje) {
   return `<div class="card hero-card"><div class="mut">Te queda para hoy</div><div class="hero-fila"><div class="num ${clase}" style="margin:0;font-size:2.5rem">${pesosConCentavos(c.quedaHoy)}</div>${anillo(porcentaje, clase)}</div>` +
+    etiquetaRinde(S.rendDispOn) +
     `<div class="bar ${clase}"><i style="width:${porcentaje}%"></i></div>` +
     `<div class="mut">Presupuesto de hoy ${pesos(presupuesto)}. Gastaste ${pesos(c.gastoHoy)}.</div>` +
     (c.fondo.activo ? `<div class="mut" style="margin-top:4px">Lo que no gastes hoy va a tu fondo: <b class="${c.fondo.hoySuma < 0 ? 'neg' : ''}">${pesosConCentavos(c.fondo.hoySuma)}</b></div>` : '') +
@@ -1772,7 +1787,7 @@ function tarjetaFondo(c) {
   const lista = usos.length
     ? '<div style="margin-top:8px">' + usos.map((x, k) => `<div class="row"><span>${diaYMes(x.date)} ${escapar(x.note || 'Uso del fondo')}${x.para !== 'cubre' ? ' (para hoy)' : ''}</span><span><b>${dinero(-x.amt)}</b><button class="x" data-a="quitarUsoFondo" data-i="${k}">✕</button></span></div>`).join('') + '</div>'
     : '';
-  return `<div class="card"><div class="mut">Mi fondo de ahorro ${botonOjo()}</div><div class="num">${dinero(f.totalConRend)}</div>` +
+  return `<div class="card"><div class="mut">Mi fondo de ahorro ${botonOjo()}</div><div class="num">${dinero(f.totalConRend)}</div>` + etiquetaRinde(S.rendOn) +
     `<div class="mut">${detalle}</div>` +
     (f.rend > 0.005 ? `<div class="mut" style="margin-top:4px">Incluye rendimiento estimado: <b>${dinero(f.rend)}</b></div>` : '') + lineaFondo(c) + formulario + lista + '</div>';
 }
@@ -2136,7 +2151,7 @@ function tarjetaModoFondo() {
 function tarjetaRendimiento() {
   const hay = !!(S.rendOn || S.rendDispOn);
   return '<div class="card"><h2>Rendimiento de Mercado Pago</h2>' +
-    '<div class="mut" style="margin-bottom:8px">Tu plata va sumando sola lo que rendiría con la tasa que pongas. Es una estimación: lo que manda es lo que ves en Mercado Pago. Activalo cuando tu plata esté en Mercado Pago.</div>' +
+    '<div class="mut" style="margin-bottom:8px">Tu plata va sumando sola lo que rendiría con la tasa que pongas. Funciona como Mercado Pago: el interés se acredita en días hábiles (lo del fin de semana llega el lunes) y se vuelve a sumar al día siguiente. No contempla feriados. Es una estimación: lo que manda es lo que ves en Mercado Pago. Activalo cuando tu plata esté en Mercado Pago.</div>' +
     `<div class="f"><input type="checkbox" data-f="rendDispOn"${S.rendDispOn ? ' checked' : ''}><span>Sumar rendimiento a mi dinero disponible</span></div>` +
     (S.modoFondo ? `<div class="f"><input type="checkbox" data-f="rendOn"${S.rendOn ? ' checked' : ''}><span>Sumar rendimiento a mi fondo de ahorro</span></div>` : '') +
     (hay ? '<label>Tasa anual (TNA) en %</label>' +
