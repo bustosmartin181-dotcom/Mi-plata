@@ -184,6 +184,8 @@ button {
   transition: transform 0.15s ease, background 0.15s;
 }
 button:active { transform: scale(0.97); }
+button.plegar { display: block; width: 100%; text-align: left; background: none; border: 0; box-shadow: none; padding: 2px 0; color: var(--tx, inherit); font: inherit; font-weight: 700; font-size: 1.05rem; }
+.plegado { margin-top: 12px; }
 button.sec {
   background: transparent;
   color: var(--ac);
@@ -1153,6 +1155,7 @@ const UI = {
   ajustePendiente: null, // diferencia de cuentas esperando confirmación
   mostrarDinero: false,  // ¿se muestran los números del mes?
   respuestaIA: '', pensando: false, ultimaPregunta: '',
+  abiertos: {},          // secciones desplegables que están abiertas (todas arrancan cerradas)
 };
 
 /* =====================================================================
@@ -1869,6 +1872,16 @@ function tarjetaGastosAnotados() {
 }
 
 /* ------------------------------ DÍAS ------------------------------ */
+/* Convierte una tarjeta en una celda desplegable: cerrada muestra título y resumen; abierta, el contenido */
+function plegable(id, tarjeta, resumen) {
+  const m = tarjeta.match(/^<div class="card">(?:<h2>([\s\S]*?)<\/h2>)?([\s\S]*)<\/div>$/);
+  if (!m) return tarjeta;
+  const abierto = !!UI.abiertos[id];
+  return '<div class="card"><button class="plegar" data-a="plegar" data-s="' + id + '">' + (m[1] || '') +
+    (resumen ? ' · ' + resumen : '') + (abierto ? '  ▴' : '  ▾') + '</button>' +
+    (abierto ? '<div class="plegado">' + m[2] + '</div>' : '') + '</div>';
+}
+
 function pantallaDias(c) {
   const hoy = hoyISO();
   const filas = diasDelPeriodo(S, hoy).map(x => {
@@ -1877,11 +1890,11 @@ function pantallaDias(c) {
       `<span>${pesos(x.presupuesto)}</span><span>${x.gasto ? pesos(x.gasto) : ''}</span>` +
       `<span class="${pasado && x.sobra < 0 ? 'neg' : ''}">${pasado ? pesos(x.sobra) : ''}</span></div>`;
   }).join('');
-  return tarjetaObjetivo(c) + graficoDias(c) + '<div class="card"><h2>Día por día</h2><div class="mut" style="margin:-4px 0 8px">Tocá un día para ver sus gastos.</div>' +
+  return tarjetaObjetivo(c) + graficoDias(c) + plegable('dias', '<div class="card"><h2>Día por día</h2><div class="mut" style="margin:-4px 0 8px">Tocá un día para ver sus gastos.</div>' +
     '<div class="tb mut"><span>Día</span><span>Presupuesto</span><span>Gasto</span><span>Sobrante</span></div>' + filas +
     '<div style="margin-top:8px">' + filaDoble('Total gastado', pesos(suma(S.spent.filter(e => !e.meta), e => e.amt))) +
     filaDoble(`Queda del monto disponible ${botonOjo()}`, dinero(c.saldo)) +
-    (c.fondo.activo ? filaDoble('Ahorrado en el fondo este período', dinero(c.fondo.ahorroPeriodo)) : '') + '</div></div>';
+    (c.fondo.activo ? filaDoble('Ahorrado en el fondo este período', dinero(c.fondo.ahorroPeriodo)) : '') + '</div></div>', 'día ' + (c.hoyIdx + 1) + ' de ' + c.dias);
 }
 
 function ventanaDia(iso) {
@@ -1908,7 +1921,13 @@ function pantallaPlan(c) {
   const resumen = '<div class="card"><h2>Resumen del mes</h2>' + filaDoble('Total de ingresos', dinero(totalIngresos(S))) +
     filaDoble('Total gastos importantes', pesos(c.total)) + filaDoble('Todavía por pagar', pesos(c.porPagar)) +
     filaDoble(`Disponible del mes ${botonOjo()}`, dinero(c.disp)) + filaDoble(`Base por día (${c.dias} días)`, pesos(c.base)) + '</div>';
-  return tarjetaIngresos(false) + tarjetaGastosImportantes() + tarjetaProximos() + tarjetaCuotas() + resumen + tarjetaMetas();
+  const nGastos = S.items.filter(i => i.n || i.a).length, nProx = gastosQueSeRepiten(S).length + (S.proximos || []).length, nCuotas = resumenCuotas(S).length;
+  const cuenta = (n, uno, varios) => n + ' ' + (n === 1 ? uno : varios);
+  return tarjetaIngresos(false) +
+    plegable('gastos', tarjetaGastosImportantes(), cuenta(nGastos, 'gasto', 'gastos')) +
+    plegable('proximo', tarjetaProximos(), cuenta(nProx, 'gasto', 'gastos')) +
+    plegable('cuotas', tarjetaCuotas(), nCuotas ? cuenta(nCuotas, 'en curso', 'en curso') : '') +
+    resumen + tarjetaMetas();
 }
 
 function tarjetaIngresos(intro) {
@@ -2089,7 +2108,7 @@ function pantallaClaude() {
 
 /* ------------------------------ AJUSTES ------------------------------ */
 function pantallaAjustes(c) {
-  return [S.demo ? tarjetaDemo() : '', tarjetaPin(), tarjetaApariencia(), tarjetaRecordatorio(), tarjetaPeriodo(), tarjetaModoFondo(), tarjetaRendimiento(), tarjetaNuevoPeriodo(c), tarjetaCierreNocturno(), tarjetaNube(), tarjetaExcel(),
+  return [S.demo ? tarjetaDemo() : '', tarjetaPin(), tarjetaApariencia(), tarjetaRecordatorio(), tarjetaPeriodo(), tarjetaModoFondo(), tarjetaRendimiento(), tarjetaNuevoPeriodo(c), tarjetaCierreNocturno(), plegable('copias', tarjetaNube(), textoCopia()), plegable('exportar', tarjetaExcel(), ''),
     tarjetaAcercaDe(),
     S.demo ? '' : tarjetaDemo(),
     S.demo ? '' : '<div class="card"><h2>Empezar de cero</h2><button class="sec" data-a="borrarTodo">Borrar todo</button></div>'].join('');
@@ -2183,6 +2202,11 @@ function tarjetaCierreNocturno() {
   return '<div class="card"><h2>Cierre nocturno</h2><div class="mut" style="margin-bottom:8px">Cada noche, antes de cambiar el día, la app congela el estado del día y guarda una copia. Si estaba cerrada a esa hora, lo hace al abrirla.</div>' +
     (copias.length ? [...copias].reverse().map((cp, k) => `<div class="row"><span>Cierre del ${diaYMes(cp.iso)}</span><button class="sec" data-a="restaurarCierre" data-i="${copias.length - 1 - k}">Restaurar</button></div>`).join('')
       : '<div class="mut">Todavía no hay copias.</div>') + '</div>';
+}
+
+function textoCopia() {
+  const e = estadoCopia(S, Date.now());
+  return e.dias === null ? 'sin copias' : (e.dias === 0 ? 'copia de hoy' : 'hace ' + e.dias + (e.dias === 1 ? ' día' : ' días'));
 }
 
 function tarjetaNube() {
@@ -2321,6 +2345,7 @@ const ACCIONES = {
   },
   dictar() { dictarGasto(); return SIN_GUARDAR; },
   verTodos() { UI.verTodos = !UI.verTodos; dibujar(); return SIN_GUARDAR; },
+  plegar(el) { UI.abiertos[el.dataset.s] = !UI.abiertos[el.dataset.s]; dibujar(); return SIN_GUARDAR; },
   resumen() { ventanaResumen(); return SIN_GUARDAR; },
   recalibrar() {
     const c = calcular(S, hoyISO());
