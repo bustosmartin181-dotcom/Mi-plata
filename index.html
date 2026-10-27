@@ -726,6 +726,18 @@ body[data-panel="ajustes"] nav button.on{background:#7A5A2C}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .estadisticas{background:linear-gradient(145deg,#1E3024,#19231D 72%);border-color:#38503D}:root:not([data-theme="light"]) .estadisticas-metricas>div{background:#25372A}:root:not([data-theme="light"]) .estadisticas-icono{background:#294734}:root:not([data-theme="light"]) .estadisticas-destacada{background:#3A3425;color:#E7CB91}}
 :root[data-theme="dark"] .estadisticas{background:linear-gradient(145deg,#1E3024,#19231D 72%);border-color:#38503D}
 :root[data-theme="dark"] .estadisticas-metricas>div{background:#25372A}:root[data-theme="dark"] .estadisticas-icono{background:#294734}:root[data-theme="dark"] .estadisticas-destacada{background:#3A3425;color:#E7CB91}
+
+/* Comparación del promedio diario con el período anterior ya guardado. */
+.estadisticas-comparacion{display:grid;gap:5px;margin-top:15px;padding:13px 14px;border-radius:15px;background:#E8F1E9}
+.estadisticas-comparacion>b{font-size:13px}
+.estadisticas-comparacion>span{font-size:14px}
+.estadisticas-comparacion>small{font-size:11px;color:var(--mut)}
+.estadisticas-comparacion.subio{background:#F7E9E8;color:#8B3934}
+.estadisticas-comparacion.bajo{background:#E2F1E6;color:#276A43}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .estadisticas-comparacion{background:#25372A}:root:not([data-theme="light"]) .estadisticas-comparacion.subio{background:#3D2928;color:#F0B2AA}:root:not([data-theme="light"]) .estadisticas-comparacion.bajo{background:#233A2B;color:#A9D9B5}}
+:root[data-theme="dark"] .estadisticas-comparacion{background:#25372A}
+:root[data-theme="dark"] .estadisticas-comparacion.subio{background:#3D2928;color:#F0B2AA}
+:root[data-theme="dark"] .estadisticas-comparacion.bajo{background:#233A2B;color:#A9D9B5}
 </style></head><body>
 <main id="m"></main>
 <nav><button data-t="plan">Plan</button><button data-t="hoy">Hoy</button><button data-t="dias">Días</button><button data-t="ajustes">Ajustes</button></nav>
@@ -2154,6 +2166,28 @@ function tarjetaEstadisticas(c) {
           Math.max(2, Math.round(valor / maximo * 100)) + '%"></i></div><small class="mut">' + pct + '% del total</small></div>';
       }).join('')
     : '<div class="mut">Cuando anotes gastos, vas a ver acá en qué categorías se concentra tu plata.</div>';
+  const anterior = Array.isArray(S.hist) && S.hist.length ? S.hist[S.hist.length - 1] : null;
+  const diasAnteriores = anterior && anterior.start && anterior.end
+    ? Math.max(1, numeroDeDia(anterior.end) - numeroDeDia(anterior.start) + 1) : 0;
+  const promedioActual = total / diasContados;
+  const promedioAnterior = diasAnteriores ? (+anterior.gastado || 0) / diasAnteriores : 0;
+  let comparacion;
+  if (!anterior || !diasAnteriores) {
+    comparacion = '<div class="estadisticas-comparacion"><b>Comparación de períodos</b><span class="mut">Aparecerá cuando guardes un período y comiences el siguiente.</span></div>';
+  } else if (promedioAnterior <= 0) {
+    comparacion = '<div class="estadisticas-comparacion"><b>Contra el período anterior</b><span class="mut">El período anterior no tiene gastos para comparar.</span></div>';
+  } else {
+    const diferencia = promedioActual - promedioAnterior;
+    const porcentajeCambio = Math.round(diferencia / promedioAnterior * 100);
+    const textoCambio = Math.abs(diferencia) < 0.5 ? 'se mantiene igual'
+      : diferencia > 0 ? 'subió ' + monto(diferencia) + ' por día'
+      : 'bajó ' + monto(-diferencia) + ' por día';
+    const claseCambio = Math.abs(diferencia) < 0.5 ? '' : diferencia > 0 ? 'subio' : 'bajo';
+    comparacion = '<div class="estadisticas-comparacion ' + claseCambio + '"><b>Contra el período anterior</b>' +
+      '<span>Promedio diario: ' + textoCambio + '</span><small>' +
+      (Math.abs(diferencia) < 0.5 ? '' : (porcentajeCambio > 0 ? '+' : '') + porcentajeCambio + '% · ') +
+      'comparado con el último período guardado</small></div>';
+  }
   return '<div class="card estadisticas"><div class="estadisticas-titulo"><div><span class="estadisticas-kicker">TU PERÍODO</span>' +
     '<h2>Resumen de gastos</h2></div><span class="estadisticas-icono">↗</span></div>' +
     '<div class="estadisticas-metricas"><div><small>Total gastado</small><b>' + monto(total) + '</b></div>' +
@@ -2161,7 +2195,7 @@ function tarjetaEstadisticas(c) {
     '<div><small>Movimientos</small><b>' + gastos.length + '</b></div></div>' +
     (categorias.length ? '<div class="estadisticas-destacada">Mayor gasto: <b>' + escapar(categorias[0][0]) +
       '</b> · ' + Math.round(categorias[0][1] / Math.max(1, total) * 100) + '% del total</div>' : '') +
-    '<div class="estadisticas-lista">' + lista + '</div></div>';
+    '<div class="estadisticas-lista">' + lista + '</div>' + comparacion + '</div>';
 }
 
 /* ------------------------------ DÍAS ------------------------------ */
