@@ -542,6 +542,87 @@ nav button {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* ===== Mi Plata: renovacion visual ===== */
+
+:root {
+  --bg: #F3F6F4;
+  --bg-soft: #E8EFEB;
+  --card: #FFFFFF;
+  --tx: #17251D;
+  --mut: #68766D;
+  --ac: #18794E;
+  --ac-soft: #E2F3E9;
+  --acx: #FFFFFF;
+  --ok: #16834D;
+  --warn: #B87520;
+  --bad: #C43D4B;
+  --bd: #DDE7E0;
+  --radius: 24px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--tx);
+  letter-spacing: -0.01em;
+}
+
+main {
+  padding-left: 18px;
+  padding-right: 18px;
+  padding-bottom: 160px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 24px;
+  box-shadow: 0 6px 22px rgba(25, 55, 38, 0.07);
+  margin-bottom: 16px;
+}
+
+h1, h2, h3 {
+  color: var(--tx);
+  letter-spacing: -0.035em;
+}
+
+button {
+  border-radius: 16px;
+  font-weight: 650;
+  transition: transform 0.15s ease;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+input, select, textarea {
+  border-radius: 16px;
+  font-size: 16px;
+}
+
+nav {
+  border-radius: 28px;
+  padding: 7px;
+  box-shadow: 0 8px 28px rgba(25, 55, 38, 0.12);
+}
+
+nav button {
+  min-height: 48px;
+  border-radius: 22px;
+}
+
+.fab {
+  border-radius: 22px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.16);
+}
+
+.grande {
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Fin de la renovacion visual ===== */
   
 </style></head><body>
 <main id="m"></main>
