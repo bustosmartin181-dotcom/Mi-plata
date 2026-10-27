@@ -659,6 +659,51 @@ nav{bottom:calc(10px + env(safe-area-inset-bottom,0px))}nav button{font-weight:6
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101713;--bg-soft:#1A241D;--card:#19231D;--tx:#F0F4EF;--mut:#A5B1A7;--bd:#303C33}:root:not([data-theme="light"]) body{background:linear-gradient(180deg,#1B3026 0,#101713 340px)}:root:not([data-theme="light"]) .app-heading{background:linear-gradient(135deg,#122E23,#15553A 62%,#1E704C)}:root:not([data-theme="light"]) input,:root:not([data-theme="light"]) select,:root:not([data-theme="light"]) textarea{background:#202B24;border-color:#39463D}:root:not([data-theme="light"]) .grafico{background:#202B24}}
 :root[data-theme="dark"] body{background:linear-gradient(180deg,#1B3026 0,#101713 340px)}:root[data-theme="dark"] input,:root[data-theme="dark"] select,:root[data-theme="dark"] textarea{background:#202B24;border-color:#39463D}:root[data-theme="dark"] .grafico{background:#202B24}
 @media(prefers-reduced-motion:reduce){.card,button{transition:none!important}}
+/* ===== Diferenciación visual por pantalla — premium ===== */
+.app-heading{min-height:208px;padding:42px 25px 34px;border-radius:0 0 42px 42px}
+.app-heading::before{content:'M';position:absolute;right:20px;bottom:-35px;color:rgba(255,255,255,.10);font:800 150px/.9 var(--font-display);letter-spacing:-.1em}
+.app-eyebrow{font-size:10px;letter-spacing:.2em}
+.app-title{font-size:clamp(40px,11vw,50px)}
+.app-subtitle{font-size:15px;max-width:300px}
+body[data-panel="hoy"] .app-heading{background:linear-gradient(145deg,#103F32,#176B4A 58%,#3D9B6E)}
+body[data-panel="plan"] .app-heading{background:linear-gradient(145deg,#292845,#49466E 60%,#77709A)}
+body[data-panel="dias"] .app-heading{background:linear-gradient(145deg,#123D51,#176B75 58%,#39A49B)}
+body[data-panel="ajustes"] .app-heading{background:linear-gradient(145deg,#443522,#7A5A2C 58%,#B28443)}
+body[data-panel="claude"] .app-heading{background:linear-gradient(145deg,#343044,#625276 58%,#9C7897)}
+body[data-panel="hoy"] main>.app-heading+div{margin:0 -2px 14px;padding:15px 17px;background:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.85);border-radius:20px;box-shadow:0 8px 22px rgba(31,55,39,.055)}
+body[data-panel="hoy"] main>.app-heading+div>div:first-child{font:700 21px/1.2 var(--font-display);letter-spacing:-.03em}
+body[data-panel="hoy"] .hero-card{padding:25px 22px;border-radius:28px;min-height:198px}
+body[data-panel="hoy"] #tarjeta-anotar{padding:21px;border-radius:25px;border-color:#BFD8C8;box-shadow:0 12px 27px rgba(27,91,61,.10)}
+body[data-panel="hoy"] #tarjeta-anotar button[data-a="anotar"]{min-height:52px;font-size:16px;background:linear-gradient(110deg,#176B4A,#319267)}
+body[data-panel="plan"] main>.app-heading~.card{border-radius:22px}
+body[data-panel="plan"] main>.app-heading+.card{background:linear-gradient(145deg,#F0EFF8,#fffefa);border-color:#DCD9EA}
+body[data-panel="plan"] main>.app-heading+.card h2{color:#49466E;font-size:20px}
+body[data-panel="plan"] .card:has(>.plegar){border-left:4px solid #77709A;background:linear-gradient(100deg,#F7F6FA,#fffefa 65%)}
+body[data-panel="plan"] .card:has(>.plegar) .plegar::after{content:'＋';width:30px;height:30px;display:grid;place-items:center;background:#EAE8F2;border-radius:50%;font-size:17px}
+body[data-panel="dias"] .card{border-radius:22px}
+body[data-panel="dias"] main>.app-heading~.card:first-of-type{border-color:#CBE2DE}
+body[data-panel="dias"] .card:has(.grafico){padding:20px;background:linear-gradient(145deg,#E8F4F0,#fffefa 72%);border-color:#CBE2DE}
+body[data-panel="dias"] .grafico{padding:14px;background:#DDEEE9}
+body[data-panel="dias"] .tb.td{background:#DCEFE9;outline:1px solid #B8DCD1}
+body[data-panel="ajustes"] .card:has(>.plegar){padding:13px 17px;border-left:4px solid #B28443;background:linear-gradient(100deg,#FBF7EF,#fffefa 72%);border-radius:20px}
+body[data-panel="ajustes"] .card:has(>.plegar) .plegar{font-size:16px}
+body[data-panel="ajustes"] .card:has(>.plegar) .plegar::after{background:#F2E8D4;color:#765529}
+body[data-panel="ajustes"] .plegado{padding-top:15px}
+nav{padding:7px;border:1px solid rgba(219,225,216,.9);background:rgba(255,254,250,.91);box-shadow:0 12px 32px rgba(23,44,32,.17)}
+nav button{gap:4px;padding-top:8px;padding-bottom:7px;font-size:11px}
+nav button::before{font-size:19px;line-height:1}
+nav button[data-t="plan"]::before{content:'▤'}
+nav button[data-t="hoy"]::before{content:'◉'}
+nav button[data-t="dias"]::before{content:'▥'}
+nav button[data-t="ajustes"]::before{content:'⚙'}
+nav button.on{color:#fff;background:var(--ac)}
+body[data-panel="plan"] nav button.on{background:#49466E}
+body[data-panel="dias"] nav button.on{background:#176B75}
+body[data-panel="ajustes"] nav button.on{background:#7A5A2C}
+.fab{width:64px;height:64px;border-radius:22px;font-size:34px;box-shadow:0 10px 26px rgba(17,74,48,.3)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) body[data-panel="plan"] .app-heading{background:linear-gradient(145deg,#292845,#49466E 60%,#77709A)}:root:not([data-theme="light"]) body[data-panel="dias"] .app-heading{background:linear-gradient(145deg,#123D51,#176B75 58%,#287C76)}:root:not([data-theme="light"]) body[data-panel="ajustes"] .app-heading{background:linear-gradient(145deg,#443522,#72562E 58%,#8F6D3B)}:root:not([data-theme="light"]) body[data-panel="hoy"] main>.app-heading+div{background:rgba(28,39,31,.85);border-color:#34483A}:root:not([data-theme="light"]) body[data-panel="plan"] main>.app-heading+.card{background:linear-gradient(145deg,#262538,#19231D);border-color:#3D3A55}:root:not([data-theme="light"]) body[data-panel="plan"] .card:has(>.plegar),:root:not([data-theme="light"]) body[data-panel="ajustes"] .card:has(>.plegar){background:#1B241E}}
+:root[data-theme="dark"] body[data-panel="hoy"] main>.app-heading+div{background:rgba(28,39,31,.85);border-color:#34483A}
+:root[data-theme="dark"] nav{background:rgba(25,35,29,.93);border-color:#344238}
 </style></head><body>
 <main id="m"></main>
 <nav><button data-t="plan">Plan</button><button data-t="hoy">Hoy</button><button data-t="dias">Días</button><button data-t="ajustes">Ajustes</button></nav>
