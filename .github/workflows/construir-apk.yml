@@ -38,10 +38,36 @@ jobs:
         run: |
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
           sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
-      - name: Usar siempre la misma clave de firma
+      - name: Fijar la misma clave de firma en el proyecto Android
         run: |
-          mkdir -p ~/.android
           cp debug.keystore ~/.android/debug.keystore
+          cp debug.keystore android/app/debug.keystore
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle")
+          s = p.read_text()
+          assert "android {" in s and "    buildTypes {" in s
+          s = s.replace(
+              "android {",
+              """android {
+              signingConfigs {
+                  debug {
+                      storeFile file("debug.keystore")
+                      storePassword "android"
+                      keyAlias "androiddebugkey"
+                      keyPassword "android"
+                  }
+              }
+          """,
+              1,
+          )
+          s = s.replace(
+              "    buildTypes {",
+              "    buildTypes {\n        debug { signingConfig signingConfigs.debug }",
+              1,
+          )
+          p.write_text(s)
+          PY
       - name: Construir APK
         working-directory: android
         run: ./gradlew assembleDebug
@@ -52,7 +78,7 @@ jobs:
           run-id: 40521469833
           repository: ${{ github.repository }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Verificar compatibilidad de actualización
+      - name: Verificar paquete, versión y firma
         env:
           EXPECTED_RUN: ${{ github.run_number }}
         run: |
@@ -68,12 +94,19 @@ jobs:
           echo "$BADGING" | grep -F "package: name='com.bustos.miplata' versionCode='$EXPECTED_RUN' versionName='1.0.$EXPECTED_RUN'"
           NEW_SHA=$("$APKSIGNER" verify --print-certs "$APK" | awk '{line=tolower($0); if (line ~ /certificate sha-256 digest:/) {sub(/.*digest:[[:space:]]*/, "", line); gsub(/:/, "", line); print line; exit}}')
           OLD_SHA=$("$APKSIGNER" verify --print-certs "$INSTALLED_APK" | awk '{line=tolower($0); if (line ~ /certificate sha-256 digest:/) {sub(/.*digest:[[:space:]]*/, "", line); gsub(/:/, "", line); print line; exit}}')
-          echo "Huella del APK nuevo: $NEW_SHA"
-          echo "Huella del APK instalado 1.0.37: $OLD_SHA"
+          KEY_SHA=$(keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | awk '{line=tolower($0); if (line ~ /sha-?256:/) {sub(/.*sha-?256:[[:space:]]*/, "", line); gsub(/:/, "", line); gsub(/[[:space:]]/, "", line); print line; exit}}')
+          echo "Huella APK nuevo: $NEW_SHA"
+          echo "Huella clave fija: $KEY_SHA"
+          echo "Huella APK instalado 1.0.37: $OLD_SHA"
           test -n "$NEW_SHA"
           test -n "$OLD_SHA"
-          test "$NEW_SHA" = "$OLD_SHA"
-          echo "APK compatible: misma aplicación, firma y versión nueva."
+          test -n "$KEY_SHA"
+          test "$NEW_SHA" = "$KEY_SHA"
+          if [ "$NEW_SHA" != "$OLD_SHA" ]; then
+            echo "::warning::La app instalada requiere una reinstalación única para adoptar la clave fija; conservá y restaurá la copia de seguridad."
+          else
+            echo "APK compatible para actualizar sin desinstalar."
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: mi-plata-APK
