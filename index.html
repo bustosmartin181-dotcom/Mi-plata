@@ -2183,13 +2183,13 @@ function pantallaDias(c) {
       `<span>${pesos(x.presupuesto)}</span><span>${x.gasto ? pesos(x.gasto) : ''}</span>` +
       `<span class="${pasado && x.sobra < 0 ? 'neg' : ''}">${pasado ? pesos(x.sobra) : ''}</span></div>`;
   }).join('');
-  return tarjetaObjetivo(c) + tarjetaEstadisticas(c) + graficoDias(c) + plegable('dias', '<div class="card"><h2>Día por día</h2><div class="mut" style="margin:-4px 0 8px">Tocá un día para ver sus gastos.</div>' +
+  const detalleDias = plegable('dias', '<div class="card"><h2>Día por día</h2><div class="mut" style="margin:-4px 0 8px">Tocá un día para ver sus gastos.</div>' +
     '<div class="tb mut"><span>Día</span><span>Presupuesto</span><span>Gasto</span><span>Sobrante</span></div>' + filas +
     '<div style="margin-top:8px">' + filaDoble('Total gastado', pesos(suma(S.spent.filter(e => !e.meta), e => e.amt))) +
     filaDoble(`Queda del monto disponible ${botonOjo()}`, dinero(c.saldo)) +
     (c.fondo.activo ? filaDoble('Ahorrado en el fondo este período', dinero(c.fondo.ahorroPeriodo)) : '') + '</div></div>', 'día ' + (c.hoyIdx + 1) + ' de ' + c.dias);
+  return tarjetaObjetivo(c) + graficoDias(c) + detalleDias + tarjetaEstadisticas(c);
 }
-
 function ventanaDia(iso) {
   const gastos = S.spent.filter(e => e.date === iso).sort((a, b) => a.id - b.id);
   const cierre = (S.cierres || {})[iso], dia = diasDelPeriodo(S, hoyISO()).find(x => x.iso === iso);
