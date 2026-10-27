@@ -704,6 +704,28 @@ body[data-panel="ajustes"] nav button.on{background:#7A5A2C}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]) body[data-panel="plan"] .app-heading{background:linear-gradient(145deg,#292845,#49466E 60%,#77709A)}:root:not([data-theme="light"]) body[data-panel="dias"] .app-heading{background:linear-gradient(145deg,#123D51,#176B75 58%,#287C76)}:root:not([data-theme="light"]) body[data-panel="ajustes"] .app-heading{background:linear-gradient(145deg,#443522,#72562E 58%,#8F6D3B)}:root:not([data-theme="light"]) body[data-panel="hoy"] main>.app-heading+div{background:rgba(28,39,31,.85);border-color:#34483A}:root:not([data-theme="light"]) body[data-panel="plan"] main>.app-heading+.card{background:linear-gradient(145deg,#262538,#19231D);border-color:#3D3A55}:root:not([data-theme="light"]) body[data-panel="plan"] .card:has(>.plegar),:root:not([data-theme="light"]) body[data-panel="ajustes"] .card:has(>.plegar){background:#1B241E}}
 :root[data-theme="dark"] body[data-panel="hoy"] main>.app-heading+div{background:rgba(28,39,31,.85);border-color:#34483A}
 :root[data-theme="dark"] nav{background:rgba(25,35,29,.93);border-color:#344238}
+
+/* Estadísticas de Días: resumen y distribución por categoría, sin guardar datos nuevos. */
+.estadisticas{background:linear-gradient(145deg,#F1F7F2,#FFFEFA 72%);border-color:#CFE1D3}
+.estadisticas-titulo{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.estadisticas-titulo h2{margin:3px 0 0;font-size:20px}
+.estadisticas-kicker{font-size:10px;letter-spacing:.15em;font-weight:700;color:var(--ac)}
+.estadisticas-icono{display:grid;place-items:center;width:38px;height:38px;border-radius:13px;background:#DDEFE3;color:var(--ac);font-size:22px}
+.estadisticas-metricas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.estadisticas-metricas>div{min-width:0;padding:11px 9px;border-radius:14px;background:#E8F1E9}
+.estadisticas-metricas small{display:block;min-height:31px;color:var(--mut);font-size:11px;line-height:1.2}
+.estadisticas-metricas b{display:block;font-size:14px;line-height:1.2;overflow-wrap:anywhere}
+.estadisticas-destacada{margin:12px 0;padding:10px 12px;border-radius:12px;background:#F6F0DF;color:#71562E;font-size:13px}
+.estadisticas-lista{margin-top:14px}
+.estadistica-categoria{padding:9px 0;border-bottom:1px solid var(--bd)}
+.estadistica-categoria:last-child{border-bottom:0;padding-bottom:0}
+.estadistica-etiqueta{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.estadistica-barra{height:7px;margin:7px 0 4px;border-radius:99px;background:var(--bd);overflow:hidden}
+.estadistica-barra i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#176B4A,#61A77D)}
+.estadistica-categoria small{font-size:11px}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .estadisticas{background:linear-gradient(145deg,#1E3024,#19231D 72%);border-color:#38503D}:root:not([data-theme="light"]) .estadisticas-metricas>div{background:#25372A}:root:not([data-theme="light"]) .estadisticas-icono{background:#294734}:root:not([data-theme="light"]) .estadisticas-destacada{background:#3A3425;color:#E7CB91}}
+:root[data-theme="dark"] .estadisticas{background:linear-gradient(145deg,#1E3024,#19231D 72%);border-color:#38503D}
+:root[data-theme="dark"] .estadisticas-metricas>div{background:#25372A}:root[data-theme="dark"] .estadisticas-icono{background:#294734}:root[data-theme="dark"] .estadisticas-destacada{background:#3A3425;color:#E7CB91}
 </style></head><body>
 <main id="m"></main>
 <nav><button data-t="plan">Plan</button><button data-t="hoy">Hoy</button><button data-t="dias">Días</button><button data-t="ajustes">Ajustes</button></nav>
@@ -2110,6 +2132,38 @@ function tarjetaGastosAnotados() {
     (todos.length > 5 ? `<button class="sec" data-a="verTodos" style="width:100%;margin-top:10px">${UI.verTodos ? 'Ver solo los últimos 5' : 'Ver todos (' + todos.length + ')'}</button>` : '') + '</div>';
 }
 
+function tarjetaEstadisticas(c) {
+  const hoy = hoyISO();
+  const gastos = S.spent.filter(e => !e.meta && e.date >= S.start && e.date <= hoy);
+  const total = suma(gastos, e => e.amt);
+  const diasContados = Math.max(1, c.hoyIdx + 1);
+  const porCategoria = new Map();
+  gastos.forEach(e => {
+    const nombre = CATEGORIAS_GASTO.some(x => x[1] === e.cat) ? e.cat : 'Otro';
+    porCategoria.set(nombre, (porCategoria.get(nombre) || 0) + (+e.amt || 0));
+  });
+  const categorias = [...porCategoria.entries()].sort((a, b) => b[1] - a[1]);
+  const maximo = categorias.length ? categorias[0][1] : 0;
+  const monto = v => dineroOculto() ? '••••••' : pesos(v);
+  const lista = categorias.length
+    ? categorias.map(([nombre, valor]) => {
+        const emoji = (CATEGORIAS_GASTO.find(x => x[1] === nombre) || ['💸'])[0];
+        const pct = total > 0 ? Math.round(valor / total * 100) : 0;
+        return '<div class="estadistica-categoria"><div class="estadistica-etiqueta"><span>' + emoji + ' ' + escapar(nombre) +
+          '</span><b>' + monto(valor) + '</b></div><div class="estadistica-barra"><i style="width:' +
+          Math.max(2, Math.round(valor / maximo * 100)) + '%"></i></div><small class="mut">' + pct + '% del total</small></div>';
+      }).join('')
+    : '<div class="mut">Cuando anotes gastos, vas a ver acá en qué categorías se concentra tu plata.</div>';
+  return '<div class="card estadisticas"><div class="estadisticas-titulo"><div><span class="estadisticas-kicker">TU PERÍODO</span>' +
+    '<h2>Resumen de gastos</h2></div><span class="estadisticas-icono">↗</span></div>' +
+    '<div class="estadisticas-metricas"><div><small>Total gastado</small><b>' + monto(total) + '</b></div>' +
+    '<div><small>Promedio por día</small><b>' + monto(total / diasContados) + '</b></div>' +
+    '<div><small>Movimientos</small><b>' + gastos.length + '</b></div></div>' +
+    (categorias.length ? '<div class="estadisticas-destacada">Mayor gasto: <b>' + escapar(categorias[0][0]) +
+      '</b> · ' + Math.round(categorias[0][1] / Math.max(1, total) * 100) + '% del total</div>' : '') +
+    '<div class="estadisticas-lista">' + lista + '</div></div>';
+}
+
 /* ------------------------------ DÍAS ------------------------------ */
 /* Convierte una tarjeta en una celda desplegable: cerrada muestra título y resumen; abierta, el contenido */
 function plegable(id, tarjeta, resumen) {
@@ -2129,7 +2183,7 @@ function pantallaDias(c) {
       `<span>${pesos(x.presupuesto)}</span><span>${x.gasto ? pesos(x.gasto) : ''}</span>` +
       `<span class="${pasado && x.sobra < 0 ? 'neg' : ''}">${pasado ? pesos(x.sobra) : ''}</span></div>`;
   }).join('');
-  return tarjetaObjetivo(c) + graficoDias(c) + plegable('dias', '<div class="card"><h2>Día por día</h2><div class="mut" style="margin:-4px 0 8px">Tocá un día para ver sus gastos.</div>' +
+  return tarjetaObjetivo(c) + tarjetaEstadisticas(c) + graficoDias(c) + plegable('dias', '<div class="card"><h2>Día por día</h2><div class="mut" style="margin:-4px 0 8px">Tocá un día para ver sus gastos.</div>' +
     '<div class="tb mut"><span>Día</span><span>Presupuesto</span><span>Gasto</span><span>Sobrante</span></div>' + filas +
     '<div style="margin-top:8px">' + filaDoble('Total gastado', pesos(suma(S.spent.filter(e => !e.meta), e => e.amt))) +
     filaDoble(`Queda del monto disponible ${botonOjo()}`, dinero(c.saldo)) +
