@@ -3,6 +3,9 @@ on:
   workflow_dispatch:
   push:
     branches: [main, master]
+permissions:
+  actions: read
+  contents: read
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -42,26 +45,35 @@ jobs:
       - name: Construir APK
         working-directory: android
         run: ./gradlew assembleDebug
+      - uses: actions/download-artifact@v4
+        with:
+          name: mi-plata-APK
+          path: apk-instalado
+          run-id: 40521469833
+          repository: ${{ github.repository }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Verificar compatibilidad de actualización
         env:
           EXPECTED_RUN: ${{ github.run_number }}
         run: |
           APK=android/app/build/outputs/apk/debug/app-debug.apk
+          INSTALLED_APK=apk-instalado/app-debug.apk
           TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
           AAPT="$TOOLS/aapt"
           APKSIGNER="$TOOLS/apksigner"
+          test -f "$INSTALLED_APK"
           test -x "$AAPT"
           test -x "$APKSIGNER"
           BADGING=$("$AAPT" dump badging "$APK")
           echo "$BADGING" | grep -F "package: name='com.bustos.miplata' versionCode='$EXPECTED_RUN' versionName='1.0.$EXPECTED_RUN'"
-          KEY_SHA=$(keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | awk 'tolower($0) ~ /sha-?256:/ {sub(/.*sha-?256:[[:space:]]*/, ""); gsub(/:/, ""); print tolower($0); exit}')
-          APK_SHA=$("$APKSIGNER" verify --print-certs "$APK" | awk 'tolower($0) ~ /certificate sha-256 digest:/ {sub(/.*digest:[[:space:]]*/, ""); gsub(/:/, ""); print tolower($0); exit}')
-          echo "Huella de la clave del repositorio: $KEY_SHA"
-          echo "Huella del APK generado: $APK_SHA"
-          test -n "$KEY_SHA"
-          test -n "$APK_SHA"
-          test "$APK_SHA" = "$KEY_SHA"
-          echo "APK verificado: aplicación, versión y firma correctas."
+          NEW_SHA=$("$APKSIGNER" verify --print-certs "$APK" | awk '{line=tolower($0); if (line ~ /certificate sha-256 digest:/) {sub(/.*digest:[[:space:]]*/, "", line); gsub(/:/, "", line); print line; exit}}')
+          OLD_SHA=$("$APKSIGNER" verify --print-certs "$INSTALLED_APK" | awk '{line=tolower($0); if (line ~ /certificate sha-256 digest:/) {sub(/.*digest:[[:space:]]*/, "", line); gsub(/:/, "", line); print line; exit}}')
+          echo "Huella del APK nuevo: $NEW_SHA"
+          echo "Huella del APK instalado 1.0.37: $OLD_SHA"
+          test -n "$NEW_SHA"
+          test -n "$OLD_SHA"
+          test "$NEW_SHA" = "$OLD_SHA"
+          echo "APK compatible: misma aplicación, firma y versión nueva."
       - uses: actions/upload-artifact@v4
         with:
           name: mi-plata-APK
