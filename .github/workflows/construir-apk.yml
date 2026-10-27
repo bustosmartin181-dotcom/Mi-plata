@@ -54,8 +54,10 @@ jobs:
           test -x "$APKSIGNER"
           BADGING=$("$AAPT" dump badging "$APK")
           echo "$BADGING" | grep -F "package: name='com.bustos.miplata' versionCode='$EXPECTED_RUN' versionName='1.0.$EXPECTED_RUN'"
-          KEY_SHA=$(keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')
-          APK_SHA=$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')
+          KEY_SHA=$(keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | awk 'tolower($0) ~ /sha-?256:/ {sub(/.*sha-?256:[[:space:]]*/, ""); gsub(/:/, ""); print tolower($0); exit}')
+          APK_SHA=$("$APKSIGNER" verify --print-certs "$APK" | awk 'tolower($0) ~ /certificate sha-256 digest:/ {sub(/.*digest:[[:space:]]*/, ""); gsub(/:/, ""); print tolower($0); exit}')
+          echo "Huella de la clave del repositorio: $KEY_SHA"
+          echo "Huella del APK generado: $APK_SHA"
           test -n "$KEY_SHA"
           test -n "$APK_SHA"
           test "$APK_SHA" = "$KEY_SHA"
