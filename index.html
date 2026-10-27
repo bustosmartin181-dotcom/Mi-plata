@@ -465,6 +465,84 @@ body.teclado nav, body.teclado .fab, body.teclado::after { display: none; }
 .k0 { --kc: #E8833A; } .k1 { --kc: #3B82C4; } .k2 { --kc: #3D9B6E; } .k3 { --kc: #B35BC4; } .k4 { --kc: #D9534F; } .k5 { --kc: #7C8A82; }
 .grafico { width: 100%; height: auto; display: block; }
 .fab { width: 64px; height: 64px; font-size: 2rem; box-shadow: 0 8px 24px rgba(0,0,0,0.28); }
+
+/* ===== Mi Plata · Rediseño minimalista One UI ===== */
+:root {
+  --radius: 24px;
+}
+
+body {
+  letter-spacing: -0.01em;
+  -webkit-tap-highlight-color: transparent;
+}
+
+main {
+  padding-left: 18px;
+  padding-right: 18px;
+  padding-bottom: 160px;
+}
+
+h1, h2, h3 {
+  letter-spacing: -0.035em;
+}
+
+.card {
+  border-radius: 24px;
+  border: 1px solid var(--bd);
+  box-shadow: 0 4px 18px rgba(25, 40, 30, 0.055);
+  transition: box-shadow .2s ease, transform .2s ease;
+}
+
+button, .chip {
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color .18s ease, transform .15s ease;
+}
+
+button {
+  border-radius: 16px;
+  font-weight: 650;
+}
+
+button:active, .chip:active {
+  transform: scale(.97);
+}
+
+input, select, textarea {
+  border-radius: 16px;
+  font-size: 16px;
+}
+
+nav {
+  border-radius: 28px;
+  padding: 7px;
+  box-shadow: 0 8px 28px rgba(25, 40, 30, 0.12);
+}
+
+nav button {
+  min-height: 48px;
+  border-radius: 22px;
+  font-size: .84rem;
+}
+
+.fab {
+  width: 60px;
+  height: 60px;
+  border-radius: 22px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .18);
+}
+
+.grande {
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+  
 </style></head><body>
 <main id="m"></main>
 <nav><button data-t="plan">Plan</button><button data-t="hoy">Hoy</button><button data-t="dias">Días</button><button data-t="ajustes">Ajustes</button></nav>
