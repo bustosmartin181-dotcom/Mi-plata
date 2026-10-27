@@ -918,7 +918,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.26';
+const VERSION_APP = '9.9.27';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1927,7 +1927,7 @@ function pantallaPlan(c) {
     plegable('gastos', tarjetaGastosImportantes(), cuenta(nGastos, 'gasto', 'gastos')) +
     plegable('proximo', tarjetaProximos(), cuenta(nProx, 'gasto', 'gastos')) +
     plegable('cuotas', tarjetaCuotas(), nCuotas ? cuenta(nCuotas, 'en curso', 'en curso') : '') +
-    resumen + tarjetaMetas();
+    resumen + plegable('metas', tarjetaMetas(), (S.metas || []).length ? cuenta((S.metas || []).length, 'meta', 'metas') : '');
 }
 
 function tarjetaIngresos(intro) {
@@ -2108,8 +2108,18 @@ function pantallaClaude() {
 
 /* ------------------------------ AJUSTES ------------------------------ */
 function pantallaAjustes(c) {
-  return [S.demo ? tarjetaDemo() : '', tarjetaPin(), tarjetaApariencia(), tarjetaRecordatorio(), tarjetaPeriodo(), tarjetaModoFondo(), tarjetaRendimiento(), tarjetaNuevoPeriodo(c), tarjetaCierreNocturno(), plegable('copias', tarjetaNube(), textoCopia()), plegable('exportar', tarjetaExcel(), ''),
-    tarjetaAcercaDe(),
+  const nCierres = Object.keys(S.cierres || {}).length;
+  return [S.demo ? tarjetaDemo() : '',
+    plegable('pin', tarjetaPin(), S.pin ? 'activado' : 'sin PIN'),
+    plegable('apariencia', tarjetaApariencia(), ''),
+    plegable('recordatorio', tarjetaRecordatorio(), ''),
+    plegable('periodo', tarjetaPeriodo(), ''),
+    plegable('fondo', tarjetaModoFondo(), S.modoFondo ? 'activado' : 'desactivado'),
+    plegable('rendimiento', tarjetaRendimiento(), ''),
+    plegable('nuevoperiodo', tarjetaNuevoPeriodo(c), ''),
+    plegable('cierres', tarjetaCierreNocturno(), nCierres + (nCierres === 1 ? ' cierre' : ' cierres')),
+    plegable('copias', tarjetaNube(), textoCopia()), plegable('exportar', tarjetaExcel(), ''),
+    plegable('acerca', tarjetaAcercaDe(), ''),
     S.demo ? '' : tarjetaDemo(),
     S.demo ? '' : '<div class="card"><h2>Empezar de cero</h2><button class="sec" data-a="borrarTodo">Borrar todo</button></div>'].join('');
 }
