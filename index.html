@@ -624,6 +624,41 @@ nav button {
 
 /* ===== Fin de la renovacion visual ===== */
   
+/* ===== Premium moderna: jerarquía y composición de las cuatro pantallas ===== */
+:root{--bg:#F4F2EC;--bg-soft:#EAE8DF;--card:#FFFEFA;--tx:#19251F;--mut:#6E7B73;--ac:#176B4A;--ac-soft:#E2F0E7;--acx:#fff;--ok:#16734C;--warn:#B66B1E;--bad:#B83E48;--bd:#E1E3DA;--radius:24px;--shadow:0 12px 32px rgba(30,48,38,.075),0 2px 6px rgba(30,48,38,.035)}
+body{background:linear-gradient(180deg,#DDE9E1 0,#F4F2EC 250px,var(--bg) 430px)}body::before{opacity:.5}
+main{padding:0 18px 168px;overflow:hidden}
+.app-heading{position:relative;overflow:hidden;margin:0 -18px 20px;padding:36px 24px 28px;min-height:174px;color:#F8FBF8;background:linear-gradient(135deg,#174B39,#176B4A 58%,#26835D);border-radius:0 0 34px 34px;box-shadow:0 16px 34px rgba(20,75,53,.22)}
+.app-heading::after{content:'';position:absolute;width:210px;height:210px;right:-64px;top:-108px;border:1px solid rgba(255,255,255,.18);border-radius:50%;box-shadow:0 0 0 24px rgba(255,255,255,.045),0 0 0 52px rgba(255,255,255,.035)}
+.app-eyebrow{display:block;margin-bottom:8px;color:#C4DFCD;font-size:11px;font-weight:700;letter-spacing:.16em}
+.app-title{margin:0;color:#fff;font:700 clamp(34px,9vw,42px)/1.03 var(--font-display);letter-spacing:-.045em}
+.app-subtitle{max-width:285px;margin:9px 0 0;color:rgba(248,251,248,.78);font-size:14px;line-height:1.4}
+.card{position:relative;padding:20px;margin-bottom:14px;overflow:hidden;background:var(--card);border:1px solid rgba(211,218,208,.82);border-radius:23px;box-shadow:var(--shadow)}
+.card h2{font-size:17px;letter-spacing:-.025em;margin-bottom:12px}.row{padding:12px 0}.num,.grande,.resultado{font-variant-numeric:tabular-nums}
+.hero-card{padding:22px;color:#F7FBF8;background:linear-gradient(145deg,#173F32,#176B4A 62%,#23835A);border:0;box-shadow:0 15px 32px rgba(23,83,58,.22)}
+.hero-card .mut,.hero-card #linea-manana{color:rgba(247,251,248,.76)}.hero-card #linea-manana b{color:#fff}
+.hero-card .num{color:#fff;font-size:clamp(36px,10vw,48px)!important;letter-spacing:-.055em}
+.hero-card .bar{background:rgba(255,255,255,.18)}.hero-card .bar i{background:#B8E6C7}
+.hero-card .anillo circle:first-child{stroke:rgba(255,255,255,.2)}.hero-card .anillo b{color:#fff}.hero-card .ok,.hero-card .warn,.hero-card .neg{color:#D8F2DF}
+#tarjeta-anotar{border:1.5px solid #C7DDCE;background:linear-gradient(160deg,#fff,#F5FAF6)}
+#tarjeta-anotar h2::before{content:'＋';display:inline-grid;place-items:center;width:27px;height:27px;margin-right:8px;border-radius:9px;color:#fff;background:var(--ac);font:600 20px/1 var(--font-body);vertical-align:-3px}
+button{border-radius:15px;min-height:44px;box-shadow:0 3px 8px rgba(24,83,57,.08)}button.sec,.chip{box-shadow:none}
+input,select,textarea{background:#F8F8F3;border-color:#DDE3DA}input:focus,select:focus,textarea:focus{background:#fff;box-shadow:0 0 0 3px rgba(23,107,74,.12)}
+#tarjeta-anotar input{background:#fff}.chip{padding:9px 13px}.chip.on{background:#176B4A}
+body[data-panel="plan"] .card:first-of-type{border-top:3px solid #176B4A}body[data-panel="plan"] .card:first-of-type h2{font-size:19px}
+body[data-panel="plan"] .card:has(>.plegar){padding:17px 19px}
+body[data-panel="plan"] .plegar,body[data-panel="ajustes"] .plegar{display:flex;align-items:center;justify-content:space-between;min-height:34px}
+body[data-panel="plan"] .plegar::after{content:'⌄';color:var(--ac);font-size:22px}
+body[data-panel="dias"] .card:has(.grafico){background:linear-gradient(155deg,#fffefa,#edf5ef)}
+.grafico{display:block;width:100%;height:auto;margin:12px 0;padding:10px;border-radius:16px;background:#F4F7F1}
+.tb{grid-template-columns:1.15fr 1fr 1fr .9fr;gap:3px;padding:10px 5px;font-size:12px}.tb span:not(:first-child){text-align:right}.tb.td{color:var(--ac);background:#E8F2EA;border-radius:10px}
+body[data-panel="ajustes"] .card:has(>.plegar){padding:17px 19px}
+body[data-panel="ajustes"] .plegar::after{content:'＋';display:grid;place-items:center;width:30px;height:30px;color:var(--ac);background:var(--ac-soft);border-radius:50%;font-size:18px}
+body[data-panel="ajustes"] .plegado{padding-top:12px;border-top:1px solid var(--bd)}
+nav{bottom:calc(10px + env(safe-area-inset-bottom,0px))}nav button{font-weight:600}.fab{border-radius:20px;background:linear-gradient(145deg,#21805A,#14583D)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101713;--bg-soft:#1A241D;--card:#19231D;--tx:#F0F4EF;--mut:#A5B1A7;--bd:#303C33}:root:not([data-theme="light"]) body{background:linear-gradient(180deg,#1B3026 0,#101713 340px)}:root:not([data-theme="light"]) .app-heading{background:linear-gradient(135deg,#122E23,#15553A 62%,#1E704C)}:root:not([data-theme="light"]) input,:root:not([data-theme="light"]) select,:root:not([data-theme="light"]) textarea{background:#202B24;border-color:#39463D}:root:not([data-theme="light"]) .grafico{background:#202B24}}
+:root[data-theme="dark"] body{background:linear-gradient(180deg,#1B3026 0,#101713 340px)}:root[data-theme="dark"] input,:root[data-theme="dark"] select,:root[data-theme="dark"] textarea{background:#202B24;border-color:#39463D}:root[data-theme="dark"] .grafico{background:#202B24}
+@media(prefers-reduced-motion:reduce){.card,button{transition:none!important}}
 </style></head><body>
 <main id="m"></main>
 <nav><button data-t="plan">Plan</button><button data-t="hoy">Hoy</button><button data-t="dias">Días</button><button data-t="ajustes">Ajustes</button></nav>
@@ -2454,8 +2489,18 @@ function dibujar() {
   if (!S.bienvenida) { nav.style.display = 'none'; fab.style.display = 'none'; principal.innerHTML = pantallaBienvenida(); return; }
   nav.style.display = ''; fab.style.display = '';
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === UI.pestana));
+  document.body.dataset.panel = UI.pestana;
+  const encabezados = {
+    hoy: ['TU DINERO, CLARO', 'Hoy', 'El pulso de tus gastos, en un solo lugar.'],
+    plan: ['ORGANIZÁ EL MES', 'Tu plan', 'Ingresos, compromisos y metas para llegar más tranquilo.'],
+    dias: ['SEGUIMIENTO', 'Día por día', 'Mirá cómo evoluciona tu presupuesto durante el período.'],
+    ajustes: ['A TU MANERA', 'Ajustes', 'Dejá Mi plata lista para acompañarte.'],
+    claude: ['TU ASISTENTE', 'Preguntá', 'Una mirada más clara sobre tus números.']
+  };
+  const [ce, ct, cs] = encabezados[UI.pestana] || encabezados.hoy;
+  const cabecera = '<header class="app-heading"><span class="app-eyebrow">' + ce + '</span><h1 class="app-title">' + ct + '</h1><p class="app-subtitle">' + cs + '</p></header>';
   const pantallas = { plan: pantallaPlan, hoy: pantallaHoy, dias: pantallaDias, claude: pantallaClaude, ajustes: pantallaAjustes };
-  principal.innerHTML = (pantallas[UI.pestana] || pantallaHoy)(calcular(S, hoyISO())) +
+  principal.innerHTML = cabecera + (pantallas[UI.pestana] || pantallaHoy)(calcular(S, hoyISO())) +
     '<div class="mut" style="text-align:center;margin-top:12px;font-size:13px">Versión ' + VERSION + (S.demo ? ' · modo demo' : '') + (mensajeNube ? ' · ' + mensajeNube : '') + '</div>' +
     pieCopyright();
 }
