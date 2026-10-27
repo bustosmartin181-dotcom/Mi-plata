@@ -42,6 +42,24 @@ jobs:
       - name: Construir APK
         working-directory: android
         run: ./gradlew assembleDebug
+      - name: Verificar compatibilidad de actualización
+        env:
+          EXPECTED_RUN: ${{ github.run_number }}
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          AAPT="$TOOLS/aapt"
+          APKSIGNER="$TOOLS/apksigner"
+          test -x "$AAPT"
+          test -x "$APKSIGNER"
+          BADGING=$("$AAPT" dump badging "$APK")
+          echo "$BADGING" | grep -F "package: name='com.bustos.miplata' versionCode='$EXPECTED_RUN' versionName='1.0.$EXPECTED_RUN'"
+          KEY_SHA=$(keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')
+          APK_SHA=$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')
+          test -n "$KEY_SHA"
+          test -n "$APK_SHA"
+          test "$APK_SHA" = "$KEY_SHA"
+          echo "APK verificado: aplicación, versión y firma correctas."
       - uses: actions/upload-artifact@v4
         with:
           name: mi-plata-APK
