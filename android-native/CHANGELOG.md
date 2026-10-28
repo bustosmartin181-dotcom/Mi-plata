@@ -1,5 +1,10 @@
 # Historial de versiones beta
 
+## 0.1.0-beta.2 · código 2
+
+- Añade el cálculo del presupuesto diario en modo fondo, respetando el arrastre de excesos y los retiros para gastar.
+- Mantiene la misma firma beta para actualizar la versión anterior sin desinstalar.
+
 ## 0.1.0-beta.1 · código 1
 
 - Primera beta numerada, con firma persistente para permitir instalar futuras actualizaciones encima.

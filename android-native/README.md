@@ -5,13 +5,13 @@ Este proyecto empieza una segunda implementación para Android con Kotlin y Jetp
 ## Estado
 
 - La beta usa el identificador `com.bustos.miplata.preview`, para poder instalarla al lado de la app actual.
-- La primera versión beta numerada es `0.1.0-beta.1` (código Android `1`). Las versiones posteriores aumentarán ambos números.
+- La versión beta actual es `0.1.0-beta.2` (código Android `2`). Se incrementan en cada beta publicable.
 - Todas las betas se firman con una clave privada fija guardada en el secreto de GitHub `MI_PLATA_BETA_SIGNING_JSON`. No guardar la clave en el repositorio público.
 - La versión de publicación queda reservada con el identificador `com.bustos.miplata`.
 - La importación valida y conserva como texto JSON la copia completa de Mi Plata. No elimina ni reescribe campos desconocidos.
 - La exportación devuelve ese mismo JSON para facilitar recuperación y compatibilidad.
-- La vista previa calcula presupuesto de hoy, gastos, saldo diario y saldo del período para el modo estándar; no modifica los datos importados.
-- El modo fondo y algunos cálculos avanzados todavía no están portados. Si detecta opciones incompatibles, la vista previa lo informa y no presenta esos valores como equivalentes.
+- La vista previa calcula presupuesto de hoy, gastos, saldo diario y saldo del período para el modo estándar y el modo fondo; no modifica los datos importados.
+- Algunas funciones avanzadas todavía no están portadas. Si detecta opciones incompatibles, la vista previa lo informa y no presenta esos valores como equivalentes.
 - Esta app todavía no reemplaza las funciones de edición, widgets o recordatorios de la app actual.
 
 ## Próximos pasos de la migración

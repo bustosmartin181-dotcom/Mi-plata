@@ -135,7 +135,7 @@ private fun MiPlataImportPreview() {
                     }
                 }
                 message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-                Text("Próxima etapa: portar el cálculo del presupuesto y compararlo con la app actual antes de habilitar cambios de datos.", style = MaterialTheme.typography.bodySmall)
+                Text("Próxima etapa: comparar los resultados con la app actual y sumar el registro de ingresos y gastos.", style = MaterialTheme.typography.bodySmall)
             }
         }
     }
