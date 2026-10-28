@@ -1,5 +1,12 @@
 # Historial de versiones beta
 
+## 0.1.0-beta.4 · código 4
+
+- Muestra los últimos ingresos y gastos anotados.
+- Permite editar o borrar ingresos y gastos desde la copia nativa.
+- Al editar o borrar un ingreso, vuelve a calcular el total de ingresos y el presupuesto.
+- Pide confirmación antes de borrar y conserva intacta la app original.
+
 ## 0.1.0-beta.3 · código 3
 
 - Permite anotar gastos e ingresos y guarda los cambios localmente en la copia importada.
