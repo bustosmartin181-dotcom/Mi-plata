@@ -74,6 +74,10 @@ private fun MiPlataImportPreview() {
     var gastoEditandoIndex by remember { mutableStateOf<Int?>(null) }
     var ingresoEditandoIndex by remember { mutableStateOf<Int?>(null) }
     var pendienteDeBorrar by remember { mutableStateOf<DeleteTarget?>(null) }
+    var mostrarNuevoPeriodo by remember { mutableStateOf(false) }
+    var periodoNuevoPrevio by remember { mutableStateOf("") }
+    var periodoNuevoInicio by remember { mutableStateOf("") }
+    var periodoNuevoFin by remember { mutableStateOf("") }
     val categoriasGasto = listOf("Comida", "Transporte", "Súper", "Salidas", "Salud", "Otro")
     val categoriasIngreso = listOf(
         "Sueldo", "Trabajo independiente", "Efectivo", "Changas o trabajo extra", "Alquileres",
@@ -251,6 +255,42 @@ private fun MiPlataImportPreview() {
     val incomes = remember(backup) { backup?.let(::readIncomes).orEmpty() }
     val expenses = remember(backup) { backup?.let(::readExpenses).orEmpty() }
     val budget = remember(backup) { backup?.let { runCatching { BudgetCalculator.calculate(JSONObject(it)) }.getOrNull() } }
+
+    fun abrirNuevoPeriodo() {
+        val current = backup?.let(::JSONObject) ?: return
+        val end = runCatching { LocalDate.parse(current.optString("end")) }.getOrNull() ?: LocalDate.now()
+        val calc = budget ?: return
+        val defaultPrevious = maxOf(0.0, calc.periodBalance - if (calc.fundActive) calc.fundSavedPeriod else 0.0)
+        periodoNuevoPrevio = (kotlin.math.round(defaultPrevious * 100.0) / 100.0).toString()
+        periodoNuevoInicio = end.toString()
+        periodoNuevoFin = end.plusMonths(1).toString()
+        mostrarNuevoPeriodo = true
+    }
+
+    fun confirmarNuevoPeriodo() {
+        if (backup == null) return
+        val previous = parseAmount(periodoNuevoPrevio)
+        val startDate = runCatching { LocalDate.parse(periodoNuevoInicio.trim()) }.getOrNull()
+        val endDate = runCatching { LocalDate.parse(periodoNuevoFin.trim()) }.getOrNull()
+        if (previous == null || previous < 0.0) {
+            message = "Revisá el saldo anterior: tiene que ser cero o mayor."
+            return
+        }
+        if (startDate == null || endDate == null || !endDate.isAfter(startDate)) {
+            message = "Revisá las fechas: el fin debe ser posterior al inicio."
+            return
+        }
+        val calc = budget
+        if (calc == null || !calc.supported) {
+            message = "No pude calcular este período; no se modificó ningún dato."
+            return
+        }
+        saveEditedCopy({ edited ->
+            finishNativePeriod(edited, calc, previous, startDate, endDate)
+        }, "Período cerrado y nuevo período iniciado. Las cuotas y los gastos repetidos se conservaron.") {
+            mostrarNuevoPeriodo = false
+        }
+    }
     MaterialTheme(colorScheme = MaterialTheme.colorScheme) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(
@@ -427,6 +467,15 @@ private fun MiPlataImportPreview() {
                             }
                         }
                     }
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Período", style = MaterialTheme.typography.titleLarge)
+                            Text("Al avanzar, se guarda el resumen actual. Las cuotas pendientes, los gastos repetidos y el fondo siguen en la copia nativa.")
+                            Button(onClick = ::abrirNuevoPeriodo, enabled = !saving && budget?.supported == true, modifier = Modifier.fillMaxWidth()) {
+                                Text("Cerrar período e iniciar otro")
+                            }
+                        }
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(onClick = { importPicker.launch(arrayOf("application/json", "text/plain", "*/*")) }) {
                             Text("Importar otra copia")
@@ -437,7 +486,7 @@ private fun MiPlataImportPreview() {
                     }
                 }
                 message?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-                Text("Próxima etapa: gestionar los períodos y seguir completando la app nativa.", style = MaterialTheme.typography.bodySmall)
+                Text("La app original y sus datos siguen separados de esta copia nativa.", style = MaterialTheme.typography.bodySmall)
             }
         }
         pendienteDeBorrar?.let { target ->
@@ -451,6 +500,41 @@ private fun MiPlataImportPreview() {
                 },
                 dismissButton = {
                     TextButton(onClick = { pendienteDeBorrar = null }, enabled = !saving) { Text("Cancelar") }
+                }
+            )
+        }
+        if (mostrarNuevoPeriodo) {
+            AlertDialog(
+                onDismissRequest = { if (!saving) mostrarNuevoPeriodo = false },
+                title = { Text("Iniciar un período nuevo") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Se guardará el resumen del período actual. Revisá el saldo que querés pasar al nuevo período.")
+                        OutlinedTextField(
+                            value = periodoNuevoPrevio,
+                            onValueChange = { periodoNuevoPrevio = it },
+                            label = { Text("Saldo anterior") }, singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
+                        OutlinedTextField(
+                            value = periodoNuevoInicio,
+                            onValueChange = { periodoNuevoInicio = it },
+                            label = { Text("Inicio (AAAA-MM-DD)") }, singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = periodoNuevoFin,
+                            onValueChange = { periodoNuevoFin = it },
+                            label = { Text("Fin (AAAA-MM-DD)") }, singleLine = true
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = ::confirmarNuevoPeriodo, enabled = !saving) {
+                        Text(if (saving) "Guardando…" else "Confirmar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { mostrarNuevoPeriodo = false }, enabled = !saving) { Text("Cancelar") }
                 }
             )
         }
@@ -547,4 +631,79 @@ private fun recomputeSalary(root: JSONObject, incomes: JSONArray) {
         if (amount.isFinite()) total += amount
     }
     root.put("sueldo", total)
+}
+
+/** Applies the original app's period rollover rules to a copy of the imported JSON. */
+private fun finishNativePeriod(
+    root: JSONObject,
+    result: BudgetCalculator.Result,
+    previous: Double,
+    start: LocalDate,
+    end: LocalDate
+) {
+    val oldStart = root.optString("start")
+    val oldEnd = root.optString("end")
+    val history = root.optJSONArray("hist") ?: JSONArray().also { root.put("hist", it) }
+    val historyRow = JSONObject()
+        .put("start", oldStart)
+        .put("end", oldEnd)
+        .put("sueldo", root.optDouble("sueldo", 0.0))
+        .put("previo", root.optDouble("previo", 0.0))
+        .put("importantes", result.importantTotal)
+        .put("gastado", result.spentTotal)
+        .put("quedo", result.periodBalance)
+    if (result.fundActive) historyRow.put("ahorro", result.fundSavedPeriod)
+    history.put(historyRow)
+
+    if (result.fundActive) {
+        root.put("fondoPrev", result.fundTotal)
+        root.put("fondoRetirado", root.optDouble("fondoRetirado", 0.0) + result.fundUses)
+        root.put("fondoUsos", JSONArray())
+        if (root.optBoolean("rendOn")) {
+            root.put("rendPrev", result.fundReturn + result.fundPendingReturn)
+            root.put("rendDesde", start.toString())
+        }
+    }
+
+    val items = root.optJSONArray("items") ?: JSONArray()
+    val retained = JSONArray()
+    for (i in 0 until items.length()) {
+        val item = items.optJSONObject(i) ?: continue
+        val installment = item.optJSONObject("q")
+        val hasInstallments = installment != null && installment.optInt("total", 0) > 1
+        if (hasInstallments && installment!!.optInt("actual", 0) >= installment.optInt("total", 0)) continue
+        if (!hasInstallments && item.has("f") && !item.optBoolean("f")) continue
+        if (hasInstallments) installment!!.put("actual", installment.optInt("actual", 0) + 1)
+        item.put("p", false)
+        item.remove("d")
+        item.remove("x")
+        val nextAmount = item.opt("prox")
+        if (nextAmount != null && nextAmount != JSONObject.NULL && nextAmount.toString().isNotBlank()) {
+            item.put("a", nextAmount.toString().toDoubleOrNull() ?: 0.0)
+        } else if (item.optBoolean("v") && !hasInstallments) {
+            item.put("a", 0)
+        }
+        item.remove("prox")
+        retained.put(item)
+    }
+    val upcoming = root.optJSONArray("proximos") ?: JSONArray()
+    for (i in 0 until upcoming.length()) {
+        val item = upcoming.optJSONObject(i) ?: continue
+        val name = item.optString("n")
+        val amount = item.optDouble("a", 0.0)
+        if (name.isNotBlank() || amount != 0.0) {
+            retained.put(JSONObject().put("n", name).put("a", amount).put("p", false).put("f", false).put("v", false))
+        }
+    }
+    root.put("items", retained)
+    root.put("proximos", JSONArray())
+    root.put("fondoDesde", "")
+    if (root.optBoolean("rendDispOn")) root.put("rendDispDesde", start.toString())
+    root.put("cierres", JSONObject())
+    root.put("ajustes", JSONArray())
+    root.put("spent", JSONArray())
+    root.remove("recal")
+    root.put("previo", previous)
+    root.put("start", start.toString())
+    root.put("end", end.toString())
 }

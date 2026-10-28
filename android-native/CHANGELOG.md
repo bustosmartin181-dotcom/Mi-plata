@@ -1,5 +1,10 @@
 # Historial de versiones beta
 
+## 0.1.0-beta.5 · código 5
+- Agrega el cierre e inicio de períodos en la copia nativa.
+- Guarda el resumen del período y conserva cuotas, gastos repetidos, gastos próximos y el fondo.
+- Mantiene separada la app original y su almacenamiento.
+
 ## 0.1.0-beta.4 · código 4
 
 - Muestra los últimos ingresos y gastos anotados.

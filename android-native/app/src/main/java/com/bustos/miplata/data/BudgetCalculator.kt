@@ -15,7 +15,15 @@ object BudgetCalculator {
         val periodBalance: Double,
         val today: LocalDate,
         val supported: Boolean = true,
-        val reason: String? = null
+        val reason: String? = null,
+        val importantTotal: Double = 0.0,
+        val spentTotal: Double = 0.0,
+        val fundActive: Boolean = false,
+        val fundSavedPeriod: Double = 0.0,
+        val fundTotal: Double = 0.0,
+        val fundReturn: Double = 0.0,
+        val fundPendingReturn: Double = 0.0,
+        val fundUses: Double = 0.0
     )
 
     private data class Discount(val amount: Double, val date: LocalDate?)
@@ -107,6 +115,11 @@ object BudgetCalculator {
         }
 
         var todayBudget: Double
+        var fundSavedPeriod = 0.0
+        var fundTotal = 0.0
+        var fundReturn = 0.0
+        var fundPendingReturn = 0.0
+        var fundUses = 0.0
         val todaySpent = spentOn(todayIndex)
         if (!modeFund) {
             for (index in 0 until todayIndex) addDailyReturn(index, 0.0, 0.0)
@@ -133,6 +146,7 @@ object BudgetCalculator {
             val rows = DoubleArray(days.toInt())
             var carry = 0.0
             var savedBefore = 0.0
+            val closedDays = ChronoUnit.DAYS.between(start, today).coerceIn(0, days).toInt()
             for (index in 0 until days) {
                 if (recalDay != null && index.toLong() == recalDay) carry = 0.0
                 val withoutCarry = dayBudget(index) + extraWithdrawals[index.toInt()]
@@ -143,6 +157,7 @@ object BudgetCalculator {
                 val beforeFundStarted = index.toLong() < fundStart
                 val savedToday = if (beforeFundStarted) 0.0
                     else if (fundRule == "fondo") remainder else maxOf(0.0, remainder)
+                if (index < closedDays) fundSavedPeriod += savedToday
                 carry = if (beforeFundStarted) remainder
                     else if (fundRule == "siguiente") minOf(0.0, remainder) else 0.0
                 if (index.toLong() < todayIndex) {
@@ -151,11 +166,52 @@ object BudgetCalculator {
                 savedBefore += savedToday
             }
             todayBudget = rows[todayIndex.toInt()]
+
+            val priorFund = root.optDouble("fondoPrev", 0.0)
+            fundUses = listSum(uses) { it.optDouble("amt", 0.0) }
+            fundTotal = priorFund + fundSavedPeriod - fundUses
+            val returnActive = root.optBoolean("rendOn") && annualRate > 0.0 && parseDate(root.optString("rendDesde")) != null
+            if (returnActive) {
+                val priorReturn = root.optDouble("rendPrev", 0.0)
+                val returnStart = parseDate(root.optString("rendDesde"))
+                    ?.let { maxOf(0L, ChronoUnit.DAYS.between(start, it)) } ?: 0L
+                var accumulated = 0.0
+                var pending = 0.0
+                var earned = 0.0
+                for (index in 0 until closedDays) {
+                    if (index > 0) accumulated += if (index - 1 >= fundStart) {
+                        val priorRemainder = rows[index - 1] - spentOn(index - 1L)
+                        if (fundRule == "fondo") priorRemainder else maxOf(0.0, priorRemainder)
+                    } else 0.0
+                    if (index.toLong() < returnStart) continue
+                    val withdrawn = listSum(uses) { use ->
+                        if (useIndex(use) <= index) use.optDouble("amt", 0.0) else 0.0
+                    }
+                    pending += maxOf(0.0, priorFund + accumulated - withdrawn + priorReturn + earned) * dailyRate
+                    val nextDay = start.plusDays(index.toLong() + 1)
+                    if (nextDay.dayOfWeek != DayOfWeek.SATURDAY && nextDay.dayOfWeek != DayOfWeek.SUNDAY) {
+                        earned += pending
+                        pending = 0.0
+                    }
+                }
+                fundReturn = priorReturn + earned
+                fundPendingReturn = pending
+            }
         }
 
         val todayRemainder = todayBudget - todaySpent
         val allNonMetaSpending = listSum(spent) { if (isMeta(it)) 0.0 else it.optDouble("amt", 0.0) }
-        return Result(todayBudget, todaySpent, todayRemainder, available - allNonMetaSpending, today)
+        return Result(
+            todayBudget, todaySpent, todayRemainder, available - allNonMetaSpending, today,
+            importantTotal = listSum(items) { amount(it) },
+            spentTotal = allNonMetaSpending,
+            fundActive = modeFund,
+            fundSavedPeriod = fundSavedPeriod,
+            fundTotal = fundTotal,
+            fundReturn = fundReturn,
+            fundPendingReturn = fundPendingReturn,
+            fundUses = fundUses
+        )
     }
 
     private fun unsupportedResult(today: LocalDate, reason: String) =
