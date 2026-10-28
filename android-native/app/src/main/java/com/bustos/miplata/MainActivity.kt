@@ -15,11 +15,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -30,6 +33,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,6 +42,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -49,6 +56,24 @@ import org.json.JSONObject
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.util.Locale
+
+private val MiPlataColors = lightColorScheme(
+    primary = Color(0xFF176B4A),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFE2F0E7),
+    onPrimaryContainer = Color(0xFF174B39),
+    secondary = Color(0xFF23835A),
+    secondaryContainer = Color(0xFFDDE9E1),
+    onSecondaryContainer = Color(0xFF174B39),
+    background = Color(0xFFF4F2EC),
+    onBackground = Color(0xFF19251F),
+    surface = Color(0xFFFFFEFA),
+    onSurface = Color(0xFF19251F),
+    surfaceVariant = Color(0xFFEAE8DF),
+    onSurfaceVariant = Color(0xFF536359),
+    outline = Color(0xFFE1E3DA),
+    error = Color(0xFFB83E48)
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -291,14 +316,24 @@ private fun MiPlataImportPreview() {
             mostrarNuevoPeriodo = false
         }
     }
-    MaterialTheme(colorScheme = MaterialTheme.colorScheme) {
+    MaterialTheme(colorScheme = MiPlataColors) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text("Mi plata", style = MaterialTheme.typography.headlineMedium)
-                Text("Versión nativa · ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+                        .background(Brush.linearGradient(listOf(Color(0xFF174B39), Color(0xFF176B4A), Color(0xFF26835D))))
+                        .padding(horizontal = 20.dp, vertical = 22.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("Mi plata", color = Color.White, style = MaterialTheme.typography.headlineMedium)
+                        Text("El pulso de tus gastos, en un solo lugar.", color = Color(0xFFE3F1E8))
+                        Text("Versión nativa · ${BuildConfig.VERSION_NAME}", color = Color(0xFFD5E8DC), style = MaterialTheme.typography.labelLarge)
+                    }
+                }
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("La app que ya usás sigue intacta", style = MaterialTheme.typography.titleMedium)
@@ -311,7 +346,7 @@ private fun MiPlataImportPreview() {
                         Text("Importar copia de Mi Plata")
                     }
                 } else {
-                    Card(Modifier.fillMaxWidth()) {
+                    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFE2F0E7))) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Copia importada", style = MaterialTheme.typography.titleLarge)
                             Text("Ingresos: ${summary.incomes}")

@@ -1,5 +1,9 @@
 # Historial de versiones beta
 
+## 0.1.0-beta.6 · código 6
+- Incorpora la paleta verde y cálida de Mi Plata en la pantalla nativa.
+- Añade un encabezado visual con el nombre y la versión de la app.
+
 ## 0.1.0-beta.5 · código 5
 - Agrega el cierre e inicio de períodos en la copia nativa.
 - Guarda el resumen del período y conserva cuotas, gastos repetidos, gastos próximos y el fondo.

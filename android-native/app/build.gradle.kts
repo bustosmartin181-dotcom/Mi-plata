@@ -17,8 +17,8 @@ android {
         applicationId = "com.bustos.miplata"
         minSdk = 24
         targetSdk = 36
-        versionCode = 5
-        versionName = "0.1.0-beta.5"
+        versionCode = 6
+        versionName = "0.1.0-beta.6"
     }
 
     signingConfigs {
