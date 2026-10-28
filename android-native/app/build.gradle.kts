@@ -36,6 +36,7 @@ android {
 }
 
 dependencies {
+    // This stable Compose BOM stays compatible with compileSdk 36 and AGP 8.13.
     val composeBom = platform("androidx.compose:compose-bom:2025.12.00")
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.12.4")
