@@ -24,6 +24,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -57,22 +58,25 @@ import java.text.NumberFormat
 import java.time.LocalDate
 import java.util.Locale
 
-private val MiPlataColors = lightColorScheme(
-    primary = Color(0xFF176B4A),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFE2F0E7),
-    onPrimaryContainer = Color(0xFF174B39),
-    secondary = Color(0xFF23835A),
-    secondaryContainer = Color(0xFFDDE9E1),
-    onSecondaryContainer = Color(0xFF174B39),
-    background = Color(0xFFF4F2EC),
-    onBackground = Color(0xFF19251F),
-    surface = Color(0xFFFFFEFA),
-    onSurface = Color(0xFF19251F),
-    surfaceVariant = Color(0xFFEAE8DF),
-    onSurfaceVariant = Color(0xFF536359),
-    outline = Color(0xFFE1E3DA),
-    error = Color(0xFFB83E48)
+private data class MiPlataTheme(
+    val id: String, val name: String, val dark: Color, val primary: Color, val accent: Color,
+    val background: Color, val surface: Color, val text: Color, val muted: Color,
+    val border: Color, val soft: Color, val onSoft: Color
+) {
+    val colors: ColorScheme = lightColorScheme(
+        primary = primary, onPrimary = Color.White,
+        primaryContainer = soft, onPrimaryContainer = onSoft,
+        secondary = accent, secondaryContainer = soft, onSecondaryContainer = onSoft,
+        background = background, onBackground = text,
+        surface = surface, onSurface = text, surfaceVariant = soft,
+        onSurfaceVariant = muted, outline = border, error = Color(0xFFB83E48)
+    )
+}
+
+private val MiPlataThemes = listOf(
+    MiPlataTheme("one_ui", "One UI", Color(0xFF174B39), Color(0xFF176B4A), Color(0xFF26835D), Color(0xFFF4F2EC), Color(0xFFFFFEFA), Color(0xFF19251F), Color(0xFF536359), Color(0xFFE1E3DA), Color(0xFFE2F0E7), Color(0xFF174B39)),
+    MiPlataTheme("lavanda", "Lavanda", Color(0xFF4C2A78), Color(0xFF6D4BA1), Color(0xFF9271BD), Color(0xFFF5F1F8), Color(0xFFFFFCFF), Color(0xFF28222E), Color(0xFF675E70), Color(0xFFE5DCEA), Color(0xFFEDE3F5), Color(0xFF432665)),
+    MiPlataTheme("oceano", "Océano", Color(0xFF16436D), Color(0xFF1964A5), Color(0xFF3284BE), Color(0xFFF1F5F8), Color(0xFFFFFFFF), Color(0xFF1B2530), Color(0xFF5B6977), Color(0xFFDFE7EC), Color(0xFFE4F0F7), Color(0xFF183F61))
 )
 
 class MainActivity : ComponentActivity() {
@@ -86,6 +90,9 @@ class MainActivity : ComponentActivity() {
 private fun MiPlataImportPreview() {
     val context = LocalContext.current
     val store = remember { BackupStore(context.applicationContext) }
+    val preferences = remember { context.getSharedPreferences("preferencias_visuales", android.content.Context.MODE_PRIVATE) }
+    var themeId by remember { mutableStateOf(preferences.getString("tema", "one_ui") ?: "one_ui") }
+    val selectedTheme = MiPlataThemes.firstOrNull { it.id == themeId } ?: MiPlataThemes.first()
     val scope = rememberCoroutineScope()
     val backup by store.backupJson.collectAsState(initial = null)
     var message by remember { mutableStateOf<String?>(null) }
@@ -316,7 +323,7 @@ private fun MiPlataImportPreview() {
             mostrarNuevoPeriodo = false
         }
     }
-    MaterialTheme(colorScheme = MiPlataColors) {
+    MaterialTheme(colorScheme = selectedTheme.colors) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
@@ -325,13 +332,13 @@ private fun MiPlataImportPreview() {
                 Box(
                     modifier = Modifier.fillMaxWidth()
                         .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-                        .background(Brush.linearGradient(listOf(Color(0xFF174B39), Color(0xFF176B4A), Color(0xFF26835D))))
+                        .background(Brush.linearGradient(listOf(selectedTheme.dark, selectedTheme.primary, selectedTheme.accent)))
                         .padding(horizontal = 20.dp, vertical = 22.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Mi plata", color = Color.White, style = MaterialTheme.typography.headlineMedium)
-                        Text("El pulso de tus gastos, en un solo lugar.", color = Color(0xFFE3F1E8))
-                        Text("Versión nativa · ${BuildConfig.VERSION_NAME}", color = Color(0xFFD5E8DC), style = MaterialTheme.typography.labelLarge)
+                        Text("El pulso de tus gastos, en un solo lugar.", color = Color.White.copy(alpha = 0.88f))
+                        Text("Versión nativa · ${BuildConfig.VERSION_NAME}", color = Color.White.copy(alpha = 0.82f), style = MaterialTheme.typography.labelLarge)
                     }
                 }
                 Card(Modifier.fillMaxWidth()) {
@@ -340,13 +347,31 @@ private fun MiPlataImportPreview() {
                         Text("Esta versión es independiente. Podés consultar el presupuesto y anotar ingresos y gastos en la copia nativa; la app original y sus datos siguen separadas.")
                     }
                 }
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Colores de la app", style = MaterialTheme.typography.titleMedium)
+                        Text("Elegí el tema que más te guste. Se guarda en este teléfono.", style = MaterialTheme.typography.bodySmall)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MiPlataThemes.forEach { theme ->
+                                FilterChip(
+                                    selected = theme.id == selectedTheme.id,
+                                    onClick = {
+                                        themeId = theme.id
+                                        preferences.edit().putString("tema", theme.id).apply()
+                                    },
+                                    label = { Text(theme.name) }
+                                )
+                            }
+                        }
+                    }
+                }
                 if (summary == null) {
                     Text("Para empezar, elegí una copia JSON exportada desde Mi Plata.")
                     Button(onClick = { importPicker.launch(arrayOf("application/json", "text/plain", "*/*")) }) {
                         Text("Importar copia de Mi Plata")
                     }
                 } else {
-                    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFE2F0E7))) {
+                    Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = selectedTheme.soft)) {
                         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Text("Copia importada", style = MaterialTheme.typography.titleLarge)
                             Text("Ingresos: ${summary.incomes}")

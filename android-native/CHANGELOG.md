@@ -1,5 +1,9 @@
 # Historial de versiones beta
 
+## 0.1.0-beta.7 · código 7
+- Agrega selector de temas One UI, Lavanda y Océano.
+- Guarda la preferencia visual localmente, sin modificar la copia financiera.
+
 ## 0.1.0-beta.6 · código 6
 - Incorpora la paleta verde y cálida de Mi Plata en la pantalla nativa.
 - Añade un encabezado visual con el nombre y la versión de la app.
