@@ -86,7 +86,7 @@ private fun MiPlataImportPreview() {
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text("Mi plata", style = MaterialTheme.typography.headlineMedium)
-                Text("Versión nativa · vista previa", style = MaterialTheme.typography.titleMedium)
+                Text("Versión nativa · ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.titleMedium)
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("La app que ya usás sigue intacta", style = MaterialTheme.typography.titleMedium)

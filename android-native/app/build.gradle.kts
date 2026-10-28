@@ -4,6 +4,11 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val betaKeystorePath = providers.environmentVariable("MI_PLATA_KEYSTORE_PATH").orNull
+val betaKeystorePassword = providers.environmentVariable("MI_PLATA_KEYSTORE_PASSWORD").orNull
+val betaKeyAlias = providers.environmentVariable("MI_PLATA_KEY_ALIAS").orNull
+val betaKeyPassword = providers.environmentVariable("MI_PLATA_KEY_PASSWORD").orNull
+
 android {
     namespace = "com.bustos.miplata"
     compileSdk = 36
@@ -12,14 +17,23 @@ android {
         applicationId = "com.bustos.miplata"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 1
+        versionName = "0.1.0-beta.1"
+    }
+
+    signingConfigs {
+        create("beta") {
+            storeFile = betaKeystorePath?.let { file(it) }
+            storePassword = betaKeystorePassword
+            keyAlias = betaKeyAlias
+            keyPassword = betaKeyPassword
+        }
     }
 
     buildTypes {
         debug {
             applicationIdSuffix = ".preview"
-            versionNameSuffix = "-preview"
+            signingConfig = signingConfigs.getByName("beta")
         }
         release {
             isMinifyEnabled = true
@@ -27,7 +41,10 @@ android {
         }
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

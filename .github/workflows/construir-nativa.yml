@@ -1,4 +1,4 @@
-name: Construir Mi Plata nativa
+name: Construir Mi Plata nativa · beta
 
 on:
   workflow_dispatch:
@@ -15,6 +15,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Preparar firma fija de la beta
+        env:
+          MI_PLATA_BETA_SIGNING_JSON: ${{ secrets.MI_PLATA_BETA_SIGNING_JSON }}
+        run: |
+          if [ -z "$MI_PLATA_BETA_SIGNING_JSON" ]; then
+            echo "::error::Falta crear el secreto MI_PLATA_BETA_SIGNING_JSON en GitHub antes de compilar la beta."
+            exit 1
+          fi
+          python - <<'PY'
+          import base64, json, os
+          secret = json.loads(os.environ["MI_PLATA_BETA_SIGNING_JSON"])
+          required = ["keystoreBase64", "storePassword", "keyAlias", "keyPassword"]
+          if any(not secret.get(name) for name in required):
+              raise SystemExit("El secreto de firma beta está incompleto.")
+          for name in required:
+              print(f"::add-mask::{secret[name]}")
+          path = os.path.join(os.environ["RUNNER_TEMP"], "mi-plata-beta.p12")
+          with open(path, "wb") as key_file:
+              key_file.write(base64.b64decode(secret["keystoreBase64"], validate=True))
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              env_file.write(f"MI_PLATA_KEYSTORE_PATH={path}\n")
+              env_file.write(f"MI_PLATA_KEYSTORE_PASSWORD={secret['storePassword']}\n")
+              env_file.write(f"MI_PLATA_KEY_ALIAS={secret['keyAlias']}\n")
+              env_file.write(f"MI_PLATA_KEY_PASSWORD={secret['keyPassword']}\n")
+          PY
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -30,7 +55,9 @@ jobs:
       - name: Compilar vista previa nativa
         working-directory: android-native
         run: gradle :app:assembleDebug
+      - name: Verificar firma de la beta
+        run: apksigner verify --verbose --print-certs android-native/app/build/outputs/apk/debug/app-debug.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: mi-plata-nativa-preview
+          name: mi-plata-nativa-v0.1.0-beta.1
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
