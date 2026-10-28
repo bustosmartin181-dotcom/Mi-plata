@@ -1,5 +1,11 @@
 # Historial de versiones beta
 
+## 0.1.0-beta.3 · código 3
+
+- Permite anotar gastos e ingresos y guarda los cambios localmente en la copia importada.
+- Preserva los demás campos de la copia al guardar.
+- Muestra los centavos del presupuesto para comparar mejor con la app original.
+
 ## 0.1.0-beta.2 · código 2
 
 - Añade el cálculo del presupuesto diario en modo fondo, respetando el arrastre de excesos y los retiros para gastar.

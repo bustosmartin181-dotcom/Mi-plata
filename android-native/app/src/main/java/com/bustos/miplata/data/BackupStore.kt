@@ -24,6 +24,11 @@ class BackupStore(private val context: Context) {
         context.dataStore.edit { it[backupKey] = json }
     }
 
+    suspend fun saveEditedBackup(json: String) {
+        validateMiPlataBackup(json)
+        context.dataStore.edit { it[backupKey] = json }
+    }
+
     fun validateMiPlataBackup(json: String): JSONObject {
         val root = JSONObject(json)
         require(root.opt("items") is org.json.JSONArray) { "Falta la lista de gastos importantes." }
