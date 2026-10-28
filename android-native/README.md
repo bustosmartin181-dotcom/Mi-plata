@@ -5,14 +5,15 @@ Este proyecto empieza una segunda implementación para Android con Kotlin y Jetp
 ## Estado
 
 - La beta usa el identificador `com.bustos.miplata.preview`, para poder instalarla al lado de la app actual.
-- La versión beta actual es `0.1.0-beta.7` (código Android `7`). Se incrementan en cada beta publicable.
+- La versión beta actual es `0.1.0-beta.8` (código Android `8`). Se incrementan en cada beta publicable.
 - Todas las betas se firman con una clave privada fija guardada en el secreto de GitHub `MI_PLATA_BETA_SIGNING_JSON`. No guardar la clave en el repositorio público.
 - La versión de publicación queda reservada con el identificador `com.bustos.miplata`.
 - La importación valida y conserva como texto JSON la copia completa de Mi Plata. No elimina ni reescribe campos desconocidos.
 - La vista nativa usa la paleta verde y cálida de Mi Plata; la pantalla aún se está migrando por etapas.
-- Incluye los temas One UI, Lavanda y Océano. La elección se guarda en el teléfono, separada de la copia financiera.
+- Incluye un selector desplegable para los temas One UI, Lavanda y Océano. La elección se guarda en el teléfono, separada de la copia financiera.
 - La exportación devuelve ese mismo JSON para facilitar recuperación y compatibilidad.
 - La vista previa calcula presupuesto de hoy, gastos, saldo diario y saldo del período para el modo estándar y el modo fondo. Permite anotar, editar y borrar ingresos y gastos localmente sin descartar campos desconocidos de la copia.
+- Permite ver y gestionar las cuentas guardadas en la copia nativa; todavía requiere actualizar los saldos manualmente.
 - Algunas funciones avanzadas todavía no están portadas. Si detecta opciones incompatibles, la vista previa lo informa y no presenta esos valores como equivalentes.
 - Esta app todavía no reemplaza las funciones de edición, widgets o recordatorios de la app actual.
 

@@ -1,5 +1,9 @@
 # Historial de versiones beta
 
+## 0.1.0-beta.8 · código 8
+- Cambia los temas a un único selector desplegable.
+- Permite consultar, agregar, editar, incluir/excluir y borrar cuentas en la copia nativa.
+
 ## 0.1.0-beta.7 · código 7
 - Agrega selector de temas One UI, Lavanda y Océano.
 - Guarda la preferencia visual localmente, sin modificar la copia financiera.

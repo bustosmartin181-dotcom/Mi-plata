@@ -25,6 +25,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
@@ -103,6 +104,12 @@ private fun MiPlataImportPreview() {
     var ingresoMonto by remember { mutableStateOf("") }
     var ingresoCategoria by remember { mutableStateOf("Sueldo") }
     var mostrarCategoriasIngreso by remember { mutableStateOf(false) }
+    var mostrarTemas by remember { mutableStateOf(false) }
+    var mostrarEditorCuenta by remember { mutableStateOf(false) }
+    var cuentaEditandoIndex by remember { mutableStateOf<Int?>(null) }
+    var cuentaNombre by remember { mutableStateOf("") }
+    var cuentaSaldo by remember { mutableStateOf("") }
+    var cuentaBorrarIndex by remember { mutableStateOf<Int?>(null) }
     var gastoEditandoIndex by remember { mutableStateOf<Int?>(null) }
     var ingresoEditandoIndex by remember { mutableStateOf<Int?>(null) }
     var pendienteDeBorrar by remember { mutableStateOf<DeleteTarget?>(null) }
@@ -222,6 +229,41 @@ private fun MiPlataImportPreview() {
         message = null
     }
 
+    fun abrirCuenta(account: AccountEntry?) {
+        cuentaEditandoIndex = account?.index
+        cuentaNombre = account?.name.orEmpty()
+        cuentaSaldo = account?.balance?.toString()?.replace('.', ',').orEmpty()
+        mostrarEditorCuenta = true
+    }
+
+    fun guardarCuenta() {
+        val name = cuentaNombre.trim()
+        val amount = parseAmount(cuentaSaldo)
+        if (name.isBlank()) { message = "Escribí el nombre de la cuenta."; return }
+        if (amount == null || amount < 0.0) { message = "Ingresá un saldo igual o mayor que cero."; return }
+        val editIndex = cuentaEditandoIndex
+        saveEditedCopy({ edited ->
+            val list = ensureAccounts(edited)
+            if (editIndex == null) list.put(JSONObject().put("n", name).put("m", amount))
+            else {
+                val account = list.optJSONObject(editIndex) ?: error("Esa cuenta ya no está en la copia.")
+                account.put("n", name).put("m", amount)
+            }
+        }, if (editIndex == null) "Cuenta agregada." else "Cuenta actualizada.") {
+            mostrarEditorCuenta = false
+            cuentaEditandoIndex = null
+        }
+    }
+
+    fun borrarCuenta() {
+        val index = cuentaBorrarIndex ?: return
+        saveEditedCopy({ edited ->
+            val list = edited.optJSONArray("cuentas") ?: error("No encontré las cuentas.")
+            require(index in 0 until list.length()) { "Esa cuenta ya no está en la copia." }
+            list.remove(index)
+        }, "Cuenta borrada.") { cuentaBorrarIndex = null }
+    }
+
     fun confirmDelete(target: DeleteTarget) {
         if (saving) return
         pendienteDeBorrar = target
@@ -286,6 +328,7 @@ private fun MiPlataImportPreview() {
     val summary = remember(backup) { backup?.let(::readSummary) }
     val incomes = remember(backup) { backup?.let(::readIncomes).orEmpty() }
     val expenses = remember(backup) { backup?.let(::readExpenses).orEmpty() }
+    val accounts = remember(backup) { backup?.let(::readAccounts).orEmpty() }
     val budget = remember(backup) { backup?.let { runCatching { BudgetCalculator.calculate(JSONObject(it)) }.getOrNull() } }
 
     fun abrirNuevoPeriodo() {
@@ -351,16 +394,21 @@ private fun MiPlataImportPreview() {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Colores de la app", style = MaterialTheme.typography.titleMedium)
                         Text("Elegí el tema que más te guste. Se guarda en este teléfono.", style = MaterialTheme.typography.bodySmall)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            MiPlataThemes.forEach { theme ->
-                                FilterChip(
-                                    selected = theme.id == selectedTheme.id,
-                                    onClick = {
-                                        themeId = theme.id
-                                        preferences.edit().putString("tema", theme.id).apply()
-                                    },
-                                    label = { Text(theme.name) }
-                                )
+                        Box {
+                            OutlinedButton(onClick = { mostrarTemas = true }) {
+                                Text("Tema: ${selectedTheme.name}  ▾")
+                            }
+                            DropdownMenu(expanded = mostrarTemas, onDismissRequest = { mostrarTemas = false }) {
+                                MiPlataThemes.forEach { theme ->
+                                    DropdownMenuItem(
+                                        text = { Text(theme.name) },
+                                        onClick = {
+                                            themeId = theme.id
+                                            preferences.edit().putString("tema", theme.id).apply()
+                                            mostrarTemas = false
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -536,6 +584,44 @@ private fun MiPlataImportPreview() {
                             }
                         }
                     }
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Mis cuentas", style = MaterialTheme.typography.titleLarge)
+                            if (accounts.isEmpty()) Text("Todavía no cargaste cuentas en esta copia.", style = MaterialTheme.typography.bodySmall)
+                            accounts.forEach { account ->
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(account.name.ifBlank { "Cuenta" })
+                                        Text(pesos(account.balance))
+                                    }
+                                    Row {
+                                        Checkbox(
+                                            checked = account.included,
+                                            onCheckedChange = { included ->
+                                                saveEditedCopy({ edited ->
+                                                    val list = ensureAccounts(edited)
+                                                    val item = list.optJSONObject(account.index)
+                                                        ?: error("Esa cuenta ya no está en la copia.")
+                                                    if (included) item.remove("x") else item.put("x", true)
+                                                }, "Se actualizó la cuenta.") {}
+                                            },
+                                            enabled = !saving
+                                        )
+                                        Text("Incluir en el total", modifier = Modifier.padding(top = 12.dp))
+                                    }
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        TextButton(onClick = { abrirCuenta(account) }, enabled = !saving) { Text("Editar") }
+                                        TextButton(onClick = { cuentaBorrarIndex = account.index }, enabled = !saving) { Text("Borrar") }
+                                    }
+                                }
+                            }
+                            Text("Total en cuentas: ${pesos(accounts.filter { it.included }.sumOf { it.balance })}", style = MaterialTheme.typography.titleMedium)
+                            Button(onClick = { abrirCuenta(null) }, enabled = !saving, modifier = Modifier.fillMaxWidth()) {
+                                Text("Agregar cuenta")
+                            }
+                            Text("Los saldos se cargan manualmente. Todavía no hay conexión automática con Mercado Pago.", style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(onClick = { importPicker.launch(arrayOf("application/json", "text/plain", "*/*")) }) {
                             Text("Importar otra copia")
@@ -560,6 +646,50 @@ private fun MiPlataImportPreview() {
                 },
                 dismissButton = {
                     TextButton(onClick = { pendienteDeBorrar = null }, enabled = !saving) { Text("Cancelar") }
+                }
+            )
+        }
+        if (mostrarEditorCuenta) {
+            AlertDialog(
+                onDismissRequest = { if (!saving) mostrarEditorCuenta = false },
+                title = { Text(if (cuentaEditandoIndex == null) "Agregar cuenta" else "Editar cuenta") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = cuentaNombre,
+                            onValueChange = { cuentaNombre = it },
+                            label = { Text("Nombre") }, singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = cuentaSaldo,
+                            onValueChange = { cuentaSaldo = it },
+                            label = { Text("Saldo actual") }, singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = ::guardarCuenta, enabled = !saving) {
+                        Text(if (saving) "Guardando…" else "Guardar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { if (!saving) mostrarEditorCuenta = false }) { Text("Cancelar") }
+                }
+            )
+        }
+        cuentaBorrarIndex?.let {
+            AlertDialog(
+                onDismissRequest = { if (!saving) cuentaBorrarIndex = null },
+                title = { Text("¿Borrar esta cuenta?") },
+                text = { Text("Se quitará de las cuentas guardadas en la copia nativa. La app original no cambia.") },
+                confirmButton = {
+                    TextButton(onClick = ::borrarCuenta, enabled = !saving) {
+                        Text(if (saving) "Borrando…" else "Borrar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { cuentaBorrarIndex = null }, enabled = !saving) { Text("Cancelar") }
                 }
             )
         }
@@ -638,6 +768,13 @@ private data class IncomeEntry(
     val amount: Double
 )
 
+private data class AccountEntry(
+    val index: Int,
+    val name: String,
+    val balance: Double,
+    val included: Boolean
+)
+
 private sealed class DeleteTarget {
     data class Expense(val index: Int) : DeleteTarget()
     data class Income(val index: Int) : DeleteTarget()
@@ -683,6 +820,18 @@ private fun readIncomes(raw: String): List<IncomeEntry> = runCatching {
         IncomeEntry(index, income.optString("cat", ""), amount)
     }
 }.getOrDefault(emptyList())
+
+private fun readAccounts(raw: String): List<AccountEntry> = runCatching {
+    val accounts = JSONObject(raw).optJSONArray("cuentas") ?: return@runCatching emptyList()
+    (0 until accounts.length()).mapNotNull { index ->
+        val account = accounts.optJSONObject(index) ?: return@mapNotNull null
+        val balance = account.optDouble("m", 0.0).takeIf { it.isFinite() } ?: 0.0
+        AccountEntry(index, account.optString("n", "Cuenta"), balance, !account.optBoolean("x"))
+    }
+}.getOrDefault(emptyList())
+
+private fun ensureAccounts(root: JSONObject): JSONArray = root.optJSONArray("cuentas")
+    ?: JSONArray().also { root.put("cuentas", it) }
 
 private fun recomputeSalary(root: JSONObject, incomes: JSONArray) {
     var total = 0.0
