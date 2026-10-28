@@ -135,11 +135,11 @@ object BudgetCalculator {
             var savedBefore = 0.0
             for (index in 0 until days) {
                 if (recalDay != null && index.toLong() == recalDay) carry = 0.0
-                val withoutCarry = dayBudget(index.toLong()) + extraWithdrawals[index]
+                val withoutCarry = dayBudget(index) + extraWithdrawals[index.toInt()]
                 val budget = if (index.toLong() <= todayIndex + 1) withoutCarry + carry else withoutCarry
                 val spentOnDay = spentOn(index.toLong())
                 val remainder = budget - spentOnDay
-                rows[index] = budget
+                rows[index.toInt()] = budget
                 val beforeFundStarted = index.toLong() < fundStart
                 val savedToday = if (beforeFundStarted) 0.0
                     else if (fundRule == "fondo") remainder else maxOf(0.0, remainder)
