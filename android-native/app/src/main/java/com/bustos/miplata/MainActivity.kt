@@ -33,8 +33,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.bustos.miplata.data.BackupStore
+import com.bustos.miplata.data.BudgetCalculator
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.text.NumberFormat
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,6 +78,7 @@ private fun MiPlataImportPreview() {
     }
 
     val summary = remember(backup) { backup?.let(::readSummary) }
+    val budget = remember(backup) { backup?.let { runCatching { BudgetCalculator.calculate(JSONObject(it)) }.getOrNull() } }
     MaterialTheme(colorScheme = MaterialTheme.colorScheme) {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(
@@ -106,6 +110,21 @@ private fun MiPlataImportPreview() {
                             Text("Se conservó el archivo original completo, incluidos los campos que esta vista previa todavía no muestra.")
                         }
                     }
+                    Card(Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Presupuesto de hoy · vista previa", style = MaterialTheme.typography.titleLarge)
+                            if (budget == null || !budget.supported) {
+                                Text(budget?.reason ?: "No pude calcular el presupuesto con esta copia.")
+                                Text("No se modificó ningún dato.", style = MaterialTheme.typography.bodySmall)
+                            } else {
+                                Text("Disponible para hoy: ${pesos(budget.todayBudget)}")
+                                Text("Gastado hoy: ${pesos(budget.spentToday)}")
+                                Text("Queda hoy: ${pesos(budget.remainingToday)}")
+                                Text("Saldo del período: ${pesos(budget.periodBalance)}")
+                                Text("Compará estos valores con la pantalla Hoy de la app actual. Esta vista previa es de solo lectura.", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(onClick = { importPicker.launch(arrayOf("application/json", "text/plain", "*/*")) }) {
                             Text("Importar otra copia")
@@ -121,6 +140,9 @@ private fun MiPlataImportPreview() {
         }
     }
 }
+
+private fun pesos(value: Double): String =
+    NumberFormat.getCurrencyInstance(Locale("es", "AR")).format(kotlin.math.round(value))
 
 private data class ImportSummary(
     val incomes: Int,
