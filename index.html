@@ -964,7 +964,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.31';
+const VERSION_APP = '9.9.32';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1634,12 +1634,21 @@ async function descargar(nombre, texto) {
 async function guardarEnDocumentos(nombre, datos, esBase64) {
   const plugins = window.Capacitor && window.Capacitor.Plugins;
   if (!(CONFIG.apk && plugins && plugins.Filesystem)) return false;
-  try {
-    const pedido = { path: 'MiPlata/' + nombre, data: datos, directory: 'DOCUMENTS', recursive: true };
-    if (!esBase64) pedido.encoding = 'utf8';
-    await plugins.Filesystem.writeFile(pedido);
-    return true;
-  } catch (_) { return false; }
+  /* v9.9.32: Android no deja pisar un archivo de Documentos que creó una instalación anterior de la app
+     (pasa al desinstalar e instalar una versión nueva y guardar otra copia el mismo día).
+     Si falla, se prueba con la hora en el nombre. Devuelve el nombre con el que quedó guardado, o false. */
+  const ahora = new Date(), hora = dosDigitos(ahora.getHours()) + dosDigitos(ahora.getMinutes()) + dosDigitos(ahora.getSeconds());
+  const punto = nombre.lastIndexOf('.');
+  const nombres = [nombre, punto > 0 ? nombre.slice(0, punto) + '-' + hora + nombre.slice(punto) : nombre + '-' + hora];
+  for (const n of nombres) {
+    try {
+      const pedido = { path: 'MiPlata/' + n, data: datos, directory: 'DOCUMENTS', recursive: true };
+      if (!esBase64) pedido.encoding = 'utf8';
+      await plugins.Filesystem.writeFile(pedido);
+      return n;
+    } catch (_) {}
+  }
+  return false;
 }
 
 /* Entrega un archivo binario (Excel, PDF): lo deja en Documentos/MiPlata y abre el menú de compartir */
@@ -1648,7 +1657,7 @@ async function entregarArchivo(nombre, bytes, tipo) {
   if (CONFIG.apk && plugins && plugins.Filesystem) {
     const base64 = aBase64(bytes);
     const guardado = await guardarEnDocumentos(nombre, base64, true);
-    if (guardado) aviso('Guardado en Documentos/MiPlata/' + nombre);
+    if (guardado) aviso('Guardado en Documentos/MiPlata/' + guardado);
     if (plugins.Share) {
       try {
         const archivo = await plugins.Filesystem.writeFile({ path: nombre, data: base64, directory: 'CACHE' });
@@ -2347,6 +2356,7 @@ function tarjetaColabora() {
 
 /* v9.9.31 · Novedades: qué trae cada versión (la más nueva arriba) */
 const NOVEDADES = [      // armado con el historial del repositorio de GitHub (desde la 9.0) y lo que contó el autor
+  ['9.9.32', ['🛠️ "Guardar en el teléfono" ya no falla después de reinstalar la app: si el archivo del día ya existe, guarda otro con la hora.']],
   ['9.9.31', ['💚 Cartel para colaborar con el creador (alias para transferir).', '📋 Esta lista de novedades en Ajustes.']],
   ['9.9.30', ['🔔 Aviso en el teléfono cada noche: cuánto te sobró del día para pasar a tu reserva de Mercado Pago.', '🏦 Cartel "Para pasar a tu reserva" en Hoy, con "Abrir Mercado Pago" y "Ya lo pasé".']],
   ['9.9.29', ['🛠️ Arreglo: el fondo de ahorro ya no arranca en negativo por retiros de un período anterior.']],
@@ -2792,9 +2802,10 @@ const ACCIONES = {
   },
   async guardarEnTelefono() {
     const nombre = 'mi-plata-copia-' + hoyISO() + '.json';
-    if (await guardarEnDocumentos(nombre, JSON.stringify(S))) {
+    const guardado = await guardarEnDocumentos(nombre, JSON.stringify(S));
+    if (guardado) {
       S.ultimaCopia = Date.now(); S.posponerCopia = 0;
-      aviso('Guardado en Documentos/MiPlata/' + nombre);
+      aviso('Guardado en Documentos/MiPlata/' + guardado);
       return;
     }
     aviso('No se pudo guardar en el teléfono. Probá con "Guardar en la nube".');
