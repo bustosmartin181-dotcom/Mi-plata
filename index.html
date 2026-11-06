@@ -964,7 +964,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.30';
+const VERSION_APP = '9.9.31';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -2317,7 +2317,9 @@ function pantallaAjustes(c) {
     plegable('nuevoperiodo', tarjetaNuevoPeriodo(c), ''),
     plegable('cierres', tarjetaCierreNocturno(), nCierres + (nCierres === 1 ? ' cierre' : ' cierres')),
     plegable('copias', tarjetaNube(), textoCopia()), plegable('exportar', tarjetaExcel(), ''),
+    plegable('novedades', tarjetaNovedades(), 'versión ' + VERSION),
     plegable('acerca', tarjetaAcercaDe(), ''),
+    S.demo ? '' : tarjetaColabora(),
     S.demo ? '' : tarjetaDemo(),
     S.demo ? '' : '<div class="card"><h2>Empezar de cero</h2><button class="sec" data-a="borrarTodo">Borrar todo</button></div>'].join('');
 }
@@ -2332,6 +2334,56 @@ function tarjetaDemo() {
   return '<div class="card"><h2>🎬 Modo demo</h2>' +
     '<div class="mut" style="margin-bottom:10px">Carga datos de ejemplo para grabar videos o sacar capturas sin mostrar tu plata. Tus datos reales se guardan aparte y vuelven cuando salís.</div>' +
     '<button class="sec" data-a="activarDemo">Activar modo demo</button></div>';
+}
+
+/* v9.9.31 · Colaborá con el creador (transferencia al alias) */
+const ALIAS_COLABORA = 'MartinchoLujanino';
+function tarjetaColabora() {
+  return '<div class="card" style="border:2px solid var(--ac)"><h2>💚 Colaborá con el creador</h2>' +
+    '<div class="mut" style="margin-bottom:10px">Mi plata es gratis y sin publicidad. Si te ayuda a llegar a fin de mes y querés darme una mano para seguir mejorándola, podés mandarme lo que quieras al alias. ¡Gracias! 🙌</div>' +
+    '<div style="font-size:1.25rem;font-weight:700;margin:4px 0 10px">' + ALIAS_COLABORA + '</div>' +
+    '<button data-a="copiarAlias" style="width:100%">📋 Copiar alias</button></div>';
+}
+
+/* v9.9.31 · Novedades: qué trae cada versión (la más nueva arriba) */
+const NOVEDADES = [      // armado con el historial del repositorio de GitHub (desde la 9.0) y lo que contó el autor
+  ['9.9.31', ['💚 Cartel para colaborar con el creador (alias para transferir).', '📋 Esta lista de novedades en Ajustes.']],
+  ['9.9.30', ['🔔 Aviso en el teléfono cada noche: cuánto te sobró del día para pasar a tu reserva de Mercado Pago.', '🏦 Cartel "Para pasar a tu reserva" en Hoy, con "Abrir Mercado Pago" y "Ya lo pasé".']],
+  ['9.9.29', ['🛠️ Arreglo: el fondo de ahorro ya no arranca en negativo por retiros de un período anterior.']],
+  ['9.9.28', ['💰 Botón "Entrada" para anotar plata que te entra un día (se ve en verde con +).', '🔁 "Me lo devuelven" y lista "Me deben" para compras que hacés para otros.',
+    '🎉 Feriados nacionales y de Mendoza en Días; el rendimiento no se acredita en feriados bancarios.', '📈 Actualización por IPC cada 6 meses en los gastos que la necesitan (ej. Alejandro).',
+    '🌙 Se lee lo que escribís con el teléfono en modo oscuro.']],
+  ['9.9.27', ['📂 Secciones plegables: la lista de días, los gastos y las copias se abren al tocarlas.']],
+  ['9.9.26', ['✏️ En "Para el próximo período", un cuadrito para cargar el monto de los gastos que se repiten.']],
+  ['9.9.25', ['↑ "Rinde X%" en verde en la pantalla Hoy, como en Mercado Pago.', '📅 El rendimiento se acredita en días hábiles (lo del fin de semana llega el lunes).']],
+  ['9.9.23', ['💸 Rendimiento estimado también sobre tu dinero disponible.']],
+  ['9.9.22', ['🏦 Rendimiento estimado del fondo de ahorro con la tasa de Mercado Pago.']],
+  ['9.9.21', ['🔁 Los gastos marcados para repetir y las cuotas que siguen pasan solos al período siguiente.']],
+  ['9.9.20', ['🗓️ "Para el próximo período": anotar gastos del mes que viene sin que descuenten de este.']],
+  ['9.9.18', ['🐷 Retiros del fondo "para gastar hoy" (suman a tu día) o "para cubrir un gasto".']],
+  ['9.9.17', ['🛠️ Un gasto importante nuevo o un aumento se descuenta desde ese día, no desde el día 1.', '🛠️ El fondo cuenta desde el día en que lo activás: no toca la plata que ya tenías.']],
+  ['9.9.15', ['🐷 Fondo de ahorro: lo que no gastás cada día se guarda aparte.', '🎨 Diseño nuevo: más redondeado, anillo de progreso, categorías con íconos de colores y gráfico de días.']],
+  ['9.9.12', ['🎤 Dictado por voz para anotar gastos.']],
+  ['9.9.6 a 9.9.11', ['🎬 Modo demo con datos de ejemplo y demo automática para grabar videos.']],
+  ['9.9.3', ['☕ Versión pública con el link de Cafecito.']],
+  ['9.9.2', ['🎯 El objetivo por día pasa a ser tu límite oficial (escribís el número y listo).']],
+  ['9.9.1', ['🎯 "Mi objetivo por día" en la solapa Días.', '✍️ "Anotar gasto" siempre debajo de "Te queda para hoy" y visible con el teclado abierto.']],
+  ['9.9', ['📲 Widget para la pantalla de inicio.', '🖼️ Ícono nuevo.', '👁️ Ocultar montos pasa a ser opcional.']],
+  ['9.8', ['📊 Exportar a Excel y PDF.', '🔔 Recordatorio diario para anotar gastos.', '📱 Guardar copias en el teléfono.', '🔑 Las actualizaciones se instalan encima de la anterior (clave fija).']],
+  ['9.7', ['🎯 "Mi objetivo por día": cuánto querés gastar y cuánto te sobra para ahorrar.']],
+  ['9.6', ['➕ Botón flotante para anotar un gasto rápido.', '👋 Pantallas de bienvenida para empezar.']],
+  ['9.3', ['🏷️ Categorías de gasto.', '💾 Copias de seguridad (exportar e importar) y aviso para hacerlas.', '🔥 Racha de días en verde.']],
+  ['9.0', ['📱 App de Android (APK) compilada con GitHub Actions.', '💳 Gastos en cuotas, metas de ahorro, comparación con tus cuentas y cierre de cada noche.']],
+  ['4.3 a 8.x', ['🧹 Se sacó la sincronización con la nube: tus datos quedan solo en tu teléfono.']],
+  ['4.2', ['🔒 PIN de seguridad.']],
+  ['4.1', ['🎨 Selector de tema y colores, y tu nombre en el saludo.']],
+  ['4.0', ['📊 Barra de progreso del día.', '👋 Saludo con tu nombre y una frase corta.']],
+  ['1.0', ['🌱 Primera versión, como app web instalable (PWA), con las reglas de la planilla de sueldo: límite por día, lo que sobra pasa a mañana y si te pasás se descuenta.']],
+];
+function tarjetaNovedades() {
+  return '<div class="card"><h2>📋 Novedades por versión</h2>' + NOVEDADES.map(([v, cosas], k) =>
+    `<div style="margin:${k ? '12px' : '2px'} 0 4px;font-weight:700">Versión ${v}${k === 0 ? ' <span class="mut" style="font-weight:400">· la que tenés</span>' : ''}</div>` +
+    cosas.map(t => `<div class="mut" style="font-size:14px;margin:2px 0 2px 6px">${t}</div>`).join('')).join('') + '</div>';
 }
 
 function tarjetaAcercaDe() {
@@ -2567,6 +2619,11 @@ const ACCIONES = {
     dibujar(); return SIN_GUARDAR;
   },
   abrirIPC(el) { ventanaIPC(+el.dataset.i); return SIN_GUARDAR; },
+  async copiarAlias() {
+    try { await navigator.clipboard.writeText(ALIAS_COLABORA); aviso('Alias copiado: ' + ALIAS_COLABORA + ' 🙌'); }
+    catch (_) { aviso('Alias: ' + ALIAS_COLABORA + ' (copialo a mano)'); }
+    return SIN_GUARDAR;
+  },
   async yaPase() {
     const c = calcular(S, hoyISO()), pendiente = Math.round(resPendiente(c));
     const m = crearModal('<div style="font-weight:700;margin-bottom:6px">¿Cuánto pasaste a la reserva?</div>' +
