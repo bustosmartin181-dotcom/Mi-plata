@@ -449,7 +449,14 @@ body::after {
   pointer-events: none; z-index: 5;
 }
 body.sin-degradado::after { display: none; }
-body.teclado nav, body.teclado .fab, body.teclado::after { display: none; }
+body.teclado nav, body.teclado .fab, body.teclado .fab-ayuda, body.teclado::after { display: none; }
+/* v9.9.33: botoncito flotante para ayudar al creador (abajo a la izquierda, en Hoy) */
+.fab-ayuda { position: fixed; left: 18px; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 11;
+  height: 46px; padding: 0 14px; border-radius: 23px; border: 1.5px solid var(--ac); background: var(--card); color: var(--ac);
+  font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+  animation: latido 1.6s ease-in-out 3; }
+.fab-ayuda .corazon { font-size: 20px; display: inline-block; animation: latido 1.6s ease-in-out infinite; }
+@keyframes latido { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.12); } 30% { transform: scale(1); } 45% { transform: scale(1.08); } }
 #demo-capa { position: fixed; inset: 0; z-index: 9998; background: transparent; }
 #demo-frase { position: fixed; left: 12px; right: 12px; top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 9999; padding: 12px 16px; border-radius: 14px; background: rgba(0,0,0,.82); color: #fff; font-size: 20px; font-weight: 700; text-align: center; opacity: 0; transition: opacity .35s; pointer-events: none; }
 #demo-frase.on { opacity: 1; }
@@ -478,6 +485,7 @@ body.teclado nav, body.teclado .fab, body.teclado::after { display: none; }
 <main id="m"></main>
 <nav><button data-t="plan">Plan</button><button data-t="hoy">Hoy</button><button data-t="dias">Días</button><button data-t="ajustes">Ajustes</button></nav>
 <button id="fab" class="fab" aria-label="Anotar gasto" style="display:none">＋</button>
+<button id="fab-ayuda" class="fab-ayuda" aria-label="Ayudá al creador" style="display:none"><span class="corazon">💚</span>Ayudá al creador</button>
 <script>
 const CONFIG = {"nube": false, "claude": false, "sw": false, "apk": true};
 /* =====================================================================
@@ -964,7 +972,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.32';
+const VERSION_APP = '9.9.33';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1904,7 +1912,7 @@ function tarjetaReserva(c) {
     : `<div class="mut">Esta noche vas a tener ${dinero(hoy)} para pasar (lo que te sobra de hoy).</div>`;
   const negativo = pendiente <= -1 ? `<div class="mut" style="color:var(--warn);margin-top:6px">Sacaste del fondo más de lo que tenías sin pasar: retirá ${dinero(-pendiente)} de la reserva para que coincida.</div>` : '';
   return '<div class="card" style="border-color:var(--ac)"><div class="mut">🏦 Para pasar a tu reserva</div>' + (pendiente <= -1 ? '' : linea) + negativo +
-    (pendiente >= 1 ? '<div class="f" style="margin-top:10px;flex-wrap:wrap"><a class="bt sec" href="https://www.mercadopago.com.ar/" target="_blank" rel="noopener">Abrir Mercado Pago</a>' +
+    (pendiente >= 1 ? '<div class="f" style="margin-top:10px;flex-wrap:wrap"><button class="sec" data-a="abrirMP">💙 Abrir Mercado Pago</button>' +
       '<button data-a="yaPase">✅ Ya lo pasé</button></div>' : '') + '</div>';
 }
 
@@ -2347,15 +2355,49 @@ function tarjetaDemo() {
 
 /* v9.9.31 · Colaborá con el creador (transferencia al alias) */
 const ALIAS_COLABORA = 'MartinchoLujanino';
+/* Abre la app de Mercado Pago (com.mercadopago.wallet). Si no se abre (no está instalada o el teléfono no lo deja),
+   a los 1,5 s abre su página de Google Play, que tiene el botón "Abrir". En el navegador abre la web. */
+function abrirMercadoPago() {
+  const ir = url => { const a = document.createElement('a'); a.href = url; a.rel = 'noopener'; a.target = '_blank'; document.body.appendChild(a); a.click(); a.remove(); };
+  if (!CONFIG.apk || !window.Capacitor) return ir('https://www.mercadopago.com.ar/');
+  ir('mercadopago://home');
+  setTimeout(() => { if (!document.hidden) ir('market://details?id=com.mercadopago.wallet'); }, 1500);
+}
+async function copiarAlias() {
+  try { await navigator.clipboard.writeText(ALIAS_COLABORA); aviso('Alias copiado: ' + ALIAS_COLABORA + ' 🙌'); }
+  catch (_) { aviso('Alias: ' + ALIAS_COLABORA + ' (copialo a mano)'); }
+}
+/* Pantalla "Ayudá al creador" (se abre con el botoncito flotante de Hoy) */
+function ventanaAyuda() {
+  const m = crearModal(
+    `<div class="row" style="border:0;padding-top:0"><span></span><button class="x" id="ax">✕</button></div>` +
+    `<div style="text-align:center"><div style="font-size:56px;line-height:1">💚</div>` +
+    `<div style="font-size:1.35rem;font-weight:800;margin:8px 0 4px">Ayudá al creador</div>` +
+    `<div class="mut" style="margin-bottom:14px">Hola, soy ${AUTOR}. Hice Mi plata para llegar a fin de mes sin Excel, y la comparto gratis y sin publicidad. Si te sirve y querés darme una mano para seguir mejorándola, cualquier aporte suma. ¡Gracias de corazón!</div>` +
+    `<div class="mut" style="font-size:13px">Alias</div><div style="font-size:1.5rem;font-weight:800;letter-spacing:.3px;margin:2px 0 14px">${ALIAS_COLABORA}</div></div>` +
+    `<button id="ac" style="width:100%">📋 Copiar alias</button>` +
+    `<button class="sec" id="am2" style="width:100%;margin-top:8px">💙 Abrir Mercado Pago</button>` +
+    `<div class="mut" style="font-size:13px;margin-top:14px"><b>Cómo:</b> 1) Copiá el alias. 2) Abrí Mercado Pago. 3) Transferir → pegá el alias → elegí el monto que quieras.</div>`,
+    400, 30, 'max-height:90vh;overflow:auto');
+  m.onclick = ev => {
+    const id = ev.target.id;
+    if (ev.target === m || id === 'ax') m.remove();
+    if (id === 'ac') copiarAlias();
+    if (id === 'am2') abrirMercadoPago();
+  };
+}
+
 function tarjetaColabora() {
   return '<div class="card" style="border:2px solid var(--ac)"><h2>💚 Colaborá con el creador</h2>' +
     '<div class="mut" style="margin-bottom:10px">Mi plata es gratis y sin publicidad. Si te ayuda a llegar a fin de mes y querés darme una mano para seguir mejorándola, podés mandarme lo que quieras al alias. ¡Gracias! 🙌</div>' +
     '<div style="font-size:1.25rem;font-weight:700;margin:4px 0 10px">' + ALIAS_COLABORA + '</div>' +
-    '<button data-a="copiarAlias" style="width:100%">📋 Copiar alias</button></div>';
+    '<button data-a="copiarAlias" style="width:100%">📋 Copiar alias</button>' +
+    '<button class="sec" data-a="abrirMP" style="width:100%;margin-top:8px">💙 Abrir Mercado Pago</button></div>';
 }
 
 /* v9.9.31 · Novedades: qué trae cada versión (la más nueva arriba) */
 const NOVEDADES = [      // armado con el historial del repositorio de GitHub (desde la 9.0) y lo que contó el autor
+  ['9.9.33', ['💚 Botoncito flotante "Ayudá al creador" en Hoy, con su pantalla: copiar alias y abrir Mercado Pago.', '💙 "Abrir Mercado Pago" abre la app directamente (también en el cartel de la reserva).']],
   ['9.9.32', ['🛠️ "Guardar en el teléfono" ya no falla después de reinstalar la app: si el archivo del día ya existe, guarda otro con la hora.']],
   ['9.9.31', ['💚 Cartel para colaborar con el creador (alias para transferir).', '📋 Esta lista de novedades en Ajustes.']],
   ['9.9.30', ['🔔 Aviso en el teléfono cada noche: cuánto te sobró del día para pasar a tu reserva de Mercado Pago.', '🏦 Cartel "Para pasar a tu reserva" en Hoy, con "Abrir Mercado Pago" y "Ya lo pasé".']],
@@ -2551,12 +2593,14 @@ function ventanaResumen() {
 /* ------------------------------ DIBUJAR ------------------------------ */
 function dibujar() {
   aplicarTema();
-  const nav = document.querySelector('nav'), principal = document.getElementById('m'), fab = document.getElementById('fab');
+  const nav = document.querySelector('nav'), principal = document.getElementById('m'), fab = document.getElementById('fab'), ayuda = document.getElementById('fab-ayuda');
+  ayuda.style.display = 'none';
   /* el degradado de abajo es solo para la app; en la introducción y el bloqueo taparía el botón */
   if (bloqueada || !S.bienvenida) document.body.classList.add('sin-degradado'); else document.body.classList.remove('sin-degradado');
   if (bloqueada) { nav.style.display = 'none'; fab.style.display = 'none'; principal.innerHTML = pantallaBloqueo(); return; }
   if (!S.bienvenida) { nav.style.display = 'none'; fab.style.display = 'none'; principal.innerHTML = pantallaBienvenida(); return; }
   nav.style.display = ''; fab.style.display = '';
+  ayuda.style.display = (UI.pestana === 'hoy' && !S.demo) ? '' : 'none';
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.t === UI.pestana));
   const pantallas = { plan: pantallaPlan, hoy: pantallaHoy, dias: pantallaDias, claude: pantallaClaude, ajustes: pantallaAjustes };
   principal.innerHTML = (pantallas[UI.pestana] || pantallaHoy)(calcular(S, hoyISO())) +
@@ -2629,11 +2673,8 @@ const ACCIONES = {
     dibujar(); return SIN_GUARDAR;
   },
   abrirIPC(el) { ventanaIPC(+el.dataset.i); return SIN_GUARDAR; },
-  async copiarAlias() {
-    try { await navigator.clipboard.writeText(ALIAS_COLABORA); aviso('Alias copiado: ' + ALIAS_COLABORA + ' 🙌'); }
-    catch (_) { aviso('Alias: ' + ALIAS_COLABORA + ' (copialo a mano)'); }
-    return SIN_GUARDAR;
-  },
+  copiarAlias() { copiarAlias(); return SIN_GUARDAR; },
+  abrirMP() { abrirMercadoPago(); return SIN_GUARDAR; },
   async yaPase() {
     const c = calcular(S, hoyISO()), pendiente = Math.round(resPendiente(c));
     const m = crearModal('<div style="font-weight:700;margin-bottom:6px">¿Cuánto pasaste a la reserva?</div>' +
@@ -3277,6 +3318,7 @@ function iniciar() {
     if (pestana) { UI.pestana = pestana; dibujar(); scrollTo(0, 0); }
   };
   document.getElementById('fab').onclick = abrirAnotarGasto;
+  document.getElementById('fab-ayuda').onclick = ventanaAyuda;
   principal.onclick = alHacerClic;
   principal.onchange = alHacerCambio;
   principal.onkeydown = e => {
