@@ -845,6 +845,7 @@ function iniciarPeriodo(S, hoy, { sueldo, previo, inicio, fin }) {
   (S.proximos || []).filter(x => x.n || x.a).forEach(x => S.items.push({ n: x.n || '', a: +x.a || 0, p: false, f: false, v: false }));
   S.proximos = [];
   S.fondoDesde = '';
+  S.fondoUsos = [];          // v9.9.28: los retiros del fondo son del período que termina (aunque el fondo esté apagado)
   if (S.rendDispOn) S.rendDispDesde = inicio;
   /* Lo que te deben del período anterior no se pierde: pasa a la lista "Me deben" del período nuevo */
   S.meDeben = (S.meDeben || []).concat(S.spent.filter(pendienteDev).map(e => ({ id: e.id, date: e.date, amt: e.amt, note: e.note || '' })));
@@ -883,6 +884,9 @@ function migrarEstado(S) {
   if (S.bienvenida === undefined) S.bienvenida = (+S.sueldo > 0) || (S.spent || []).length > 0;
   /* v9.9.28: el pago a Alejandro se actualiza por IPC cada 6 meses (vos y María Sol ponen la mitad cada uno).
      Este período arrancó en septiembre 2026, así que la próxima actualización es en marzo 2027. */
+  /* v9.9.28: retiros del fondo de un período anterior que quedaron guardados (pasaba si el fondo se apagaba antes de
+     cambiar de período): ya no cuentan. Si no, al volver a activar el fondo arrancaba en negativo. */
+  if (S.fondoUsos && S.start) S.fondoUsos = S.fondoUsos.filter(x => !x.date || x.date >= S.start);
   if (!S.ipcMig) {
     S.ipcMig = 1;
     (S.items || []).forEach(i => { if (/alejandro/i.test(i.n || '') && !i.ipc) i.ipc = { prox: '2027-03', cada: 6, partes: 2 }; });
@@ -960,7 +964,7 @@ function fraseDeEstado(c, clase) {
    02b · EXPORTAR — Excel (.xlsx) y PDF armados a mano, sin librerías
    (la app tiene que funcionar sin internet). Funciones puras.
    ===================================================================== */
-const VERSION_APP = '9.9.28';
+const VERSION_APP = '9.9.30';
 const aBytes = txt => new TextEncoder().encode(txt);
 const aBase64 = bytes => {
   let b = '';
@@ -1173,6 +1177,7 @@ function actualizarWidgetResumen() {
 }
 
 function guardar() {            // todo cambio pasa por acá
+  if (S.modoFondo) programarAvisoReserva(false);
   if (S.ingresos) S.sueldo = totalIngresos(S);    // el sueldo es la suma de los ingresos
   S.upd = Date.now();
   guardarLocal();
@@ -1680,6 +1685,42 @@ async function programarRecordatorio(pedirPermiso) {
   } catch (_) { return false; }
 }
 
+/* v9.9.30 · Aviso de la reserva: cada noche, a la hora elegida, una notificación con lo que te sobró del día
+   para que lo pases a tu reserva de Mercado Pago. Se vuelve a programar cada vez que anotás algo, así el monto es el real.
+   Los días siguientes (si no abrís la app) se avisa con la base del día, que es lo que sobra si no gastás nada. */
+const AVISO_RESERVA_ID = 7100, DIAS_AVISO_RESERVA = 7;
+const resPendiente = c => (c.fondo && c.fondo.activo) ? c.fondo.total - (+S.resPasado || 0) : 0;   // días cerrados, todavía sin pasar
+let temporizadorReserva = null;
+function programarAvisoReserva(pedirPermiso) {
+  clearTimeout(temporizadorReserva);
+  return new Promise(listo => { temporizadorReserva = setTimeout(async () => {
+    const plugins = window.Capacitor && window.Capacitor.Plugins, ln = plugins && plugins.LocalNotifications;
+    if (!(CONFIG.apk && ln) || S.demo) return listo(false);
+    try {
+      await ln.cancel({ notifications: Array.from({ length: DIAS_AVISO_RESERVA }, (_, k) => ({ id: AVISO_RESERVA_ID + k })) });
+      if (!S.modoFondo || S.resAviso === false) return listo(true);
+      let permiso = await ln.checkPermissions();
+      if (permiso.display !== 'granted' && pedirPermiso) permiso = await ln.requestPermissions();
+      if (permiso.display !== 'granted') return listo('permiso');
+      const hoy = hoyISO(), c = calcular(S, hoy), [hh, mm] = (S.resHora || '22:00').split(':').map(Number);
+      const aviso = [];
+      let pendiente = resPendiente(c);
+      for (let k = 0; k < DIAS_AVISO_RESERVA; k++) {
+        const i = c.hoyIdx + k; if (i >= c.dias) break;
+        const sobra = k === 0 ? c.fondo.hoySuma : Math.max(0, c.presupuestoDia(i));
+        pendiente += sobra;
+        const cuando = new Date(); cuando.setDate(cuando.getDate() + k); cuando.setHours(hh, mm, 0, 0);
+        if (cuando <= new Date() || sobra < 1) continue;
+        aviso.push({ id: AVISO_RESERVA_ID + k, title: 'Mi plata · 🏦 A tu reserva',
+          body: 'Hoy te sobraron ' + pesos(sobra) + '. Pasalos a tu reserva de Mercado Pago' + (pendiente - sobra >= 1 ? ' (en total, ' + pesos(pendiente) + ')' : '') + '.',
+          schedule: { at: cuando, allowWhileIdle: true } });
+      }
+      if (aviso.length) await ln.schedule({ notifications: aviso });
+      listo(true);
+    } catch (_) { listo(false); }
+  }, 600); });
+}
+
 /* =====================================================================
    08 · PANTALLAS — arman el HTML de cada pestaña. Solo leen datos y
    devuelven texto; los cambios los hacen las acciones (módulo 09).
@@ -1708,6 +1749,7 @@ function pantallaHoy(c) {
     tarjetaAnotarGasto(editado, hoy),          /* SIEMPRE justo debajo de "Te queda para hoy" */
     tarjetaMeDeben(),
     tarjetaFondo(c),
+    tarjetaReserva(c),
     tarjetaGastosAnotados(),
     tarjetaRacha(),
     tarjetaAvisoCopia(),
@@ -1841,6 +1883,20 @@ function tarjetaFondo(c) {
   return `<div class="card"><div class="mut">Mi fondo de ahorro ${botonOjo()}</div><div class="num">${dinero(f.totalConRend)}</div>` + etiquetaRinde(S.rendOn) +
     `<div class="mut">${detalle}</div>` +
     (f.rend > 0.005 ? `<div class="mut" style="margin-top:4px">Incluye rendimiento estimado: <b>${dinero(f.rend)}</b></div>` : '') + lineaFondo(c) + formulario + lista + '</div>';
+}
+
+/* v9.9.30 · Cartel "Para pasar a tu reserva" */
+function tarjetaReserva(c) {
+  if (!c.fondo.activo) return '';
+  const pendiente = resPendiente(c), hoy = c.fondo.hoySuma;
+  if (pendiente < 1 && hoy < 1) return '';
+  const linea = pendiente >= 1
+    ? `<div class="num" style="font-size:1.8rem;margin:2px 0">${dinero(pendiente)}</div><div class="mut" style="font-size:13px">Es lo que fue al fondo y todavía no pasaste a tu reserva.${hoy >= 1 ? ' Esta noche se suman ' + dinero(hoy) + ' de hoy.' : ''}</div>`
+    : `<div class="mut">Esta noche vas a tener ${dinero(hoy)} para pasar (lo que te sobra de hoy).</div>`;
+  const negativo = pendiente <= -1 ? `<div class="mut" style="color:var(--warn);margin-top:6px">Sacaste del fondo más de lo que tenías sin pasar: retirá ${dinero(-pendiente)} de la reserva para que coincida.</div>` : '';
+  return '<div class="card" style="border-color:var(--ac)"><div class="mut">🏦 Para pasar a tu reserva</div>' + (pendiente <= -1 ? '' : linea) + negativo +
+    (pendiente >= 1 ? '<div class="f" style="margin-top:10px;flex-wrap:wrap"><a class="bt sec" href="https://www.mercadopago.com.ar/" target="_blank" rel="noopener">Abrir Mercado Pago</a>' +
+      '<button data-a="yaPase">✅ Ya lo pasé</button></div>' : '') + '</div>';
 }
 
 function tarjetaSaldo(c) {
@@ -2325,7 +2381,10 @@ function tarjetaModoFondo() {
     `<div class="f"><input type="checkbox" data-f="modoFondo"${on ? ' checked' : ''}><span>Activar el fondo de ahorro</span></div>` +
     (on ? '<label>Si me paso del límite de un día</label><select data-f="fondoExceso">' +
       opcion('siguiente', 'Se descuenta del día siguiente') + opcion('aparte', 'No se descuenta de ningún lado') + '</select>' +
-      `<label>Fondo que ya tenías juntado de antes</label><input type="${campoDinero()}" data-f="fondoPrev" inputmode="decimal" value="${S.fondoPrev || ''}" placeholder="Monto">` : '') +
+      `<label>Fondo que ya tenías juntado de antes</label><input type="${campoDinero()}" data-f="fondoPrev" inputmode="decimal" value="${S.fondoPrev || ''}" placeholder="Monto">` +
+      `<div class="f" style="margin-top:12px"><input type="checkbox" data-f="resAviso"${S.resAviso === false ? '' : ' checked'}><span>🔔 Avisarme cada noche cuánto pasar a mi reserva de Mercado Pago</span></div>` +
+      (S.resAviso === false ? '' : `<label>¿A qué hora?</label><input type="time" data-f="resHora" value="${S.resHora || '22:00'}">`) +
+      `<label>Ya pasé a la reserva (en total)</label><input type="${campoDinero()}" data-f="resPasado" inputmode="decimal" value="${S.resPasado || ''}" placeholder="0">` : '') +
     '</div>';
 }
 function tarjetaRendimiento() {
@@ -2508,6 +2567,20 @@ const ACCIONES = {
     dibujar(); return SIN_GUARDAR;
   },
   abrirIPC(el) { ventanaIPC(+el.dataset.i); return SIN_GUARDAR; },
+  async yaPase() {
+    const c = calcular(S, hoyISO()), pendiente = Math.round(resPendiente(c));
+    const m = crearModal('<div style="font-weight:700;margin-bottom:6px">¿Cuánto pasaste a la reserva?</div>' +
+      `<input id="rp" inputmode="decimal" value="${pendiente}"><div class="f" style="justify-content:flex-end;margin:10px 0 0"><button class="sec" id="rpn">Cancelar</button><button id="rps">Listo</button></div>`, 340);
+    m.onclick = ev => {
+      if (ev.target === m || ev.target.id === 'rpn') return m.remove();
+      if (ev.target.id !== 'rps') return;
+      const monto = aNumero(m.querySelector('#rp').value) || 0;
+      m.remove(); if (monto <= 0) return;
+      S.resPasado = Math.round(((+S.resPasado || 0) + monto) * 100) / 100;
+      guardar(); dibujar(); aviso('Anotado: pasaste ' + pesos(monto) + ' a tu reserva 👏');
+    };
+    return SIN_GUARDAR;
+  },
   /* --- me deben --- */
   cobrado(el) {
     const id = +el.dataset.i;
@@ -2756,6 +2829,14 @@ const CAMBIOS = {
     });
   },
   recHora:       v => { if (v) { S.recHora = v; if (S.recOn) programarRecordatorio(true); } },
+  resAviso:      (v, el) => {
+    S.resAviso = el.checked;
+    programarAvisoReserva(true).then(r => {
+      if (r === 'permiso') { S.resAviso = false; guardar(); dibujar(); aviso('Falta el permiso de notificaciones: activalo en los ajustes del teléfono.'); }
+    });
+  },
+  resHora:       v => { if (v) S.resHora = v; },
+  resPasado:     v => { S.resPasado = Math.max(0, aNumero(v) || 0); },
   diasCopia:     v => { S.diasCopia = Math.max(0, Math.round(aNumero(v))); },
   previo:        v => { S.previo = aNumero(v); },
   modoFondo:     (v, el) => { S.modoFondo = el.checked; if (el.checked) S.fondoDesde = hoyISO(); UI.usandoFondo = false; },
@@ -3141,6 +3222,7 @@ function iniciar() {
   dibujar();
   if (S.demo) aviso('Modo demo activo: son datos de ejemplo. Salí desde Ajustes.');
   if (S.recOn) programarRecordatorio(false);
+  if (S.modoFondo) programarAvisoReserva(false);
   actualizarWidgetResumen();
   iniciarNube().then(() => cerrarDias());
   programarCierreNocturno();
